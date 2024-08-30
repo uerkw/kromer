@@ -9,7 +9,7 @@ impl Query {
     /// Fetches a single address from the database by its unique id
     ///
     /// # Arguments
-    /// * `db` - The database connection
+    /// * `conn` - The database connection
     /// * `id` - The id of the address to fetch
     ///
     /// # Examples
@@ -17,16 +17,36 @@ impl Query {
     /// println!("TODO");
     /// ```
     pub async fn find_address_by_id(
-        db: &DbConn,
+        conn: &DbConn,
         id: i32,
     ) -> Result<Option<addresses::Model>, DbErr> {
-        Address::find_by_id(id).one(db).await
+        Address::find_by_id(id).one(conn).await
+    }
+
+    /// Fetches addresses from the database
+    ///
+    /// # Arguments
+    /// * `conn` - The database connection
+    /// * `limit` - The maximum number of addresses to fetch
+    /// * `offset` - The offset to start from
+    pub async fn fetch_addresses(
+        conn: &DbConn,
+        limit: u64,
+        offset: u64,
+    ) -> Result<Vec<addresses::Model>, DbErr> {
+        // Clamp limit to be minimum 1 and maximum 1000
+        let limit = limit.min(1).max(1000);
+
+        // TODO: Add support for fetching name count.
+        let addresses = Address::find().limit(limit).offset(offset).all(conn).await?;
+
+        Ok(addresses)
     }
 
     /// Fetches a single address from the database
     ///
     /// # Arguments
-    /// * `db` - The database connection
+    /// * `conn` - The database connection
     /// * `address` - The address to fetch
     ///
     /// # Examples
@@ -34,19 +54,21 @@ impl Query {
     /// let address = Query::find_address(db, "kromernya").await?;
     /// ```
     pub async fn find_address(
-        db: &DbConn,
+        conn: &DbConn,
         address: &str,
+        _should_fetch_names: bool
     ) -> Result<Option<addresses::Model>, DbErr> {
+        // TODO: Add support for fetching name count.
         Address::find()
             .filter(addresses::Column::Address.eq(address))
-            .one(db)
+            .one(conn)
             .await
     }
 
     /// Fetches the richest addresses from the database
     ///
     /// # Arguments
-    /// * `db` - The database connection
+    /// * `conn` - The database connection
     /// * `limit` - The number of addresses to fetch
     /// * `offset` - The offset for pagination
     ///
@@ -61,7 +83,7 @@ impl Query {
     /// }
     /// ```
     pub async fn find_richest_addresses(
-        db: &DbConn,
+        conn: &DbConn,
         limit: u64,
         offset: u64,
     ) -> Result<Vec<addresses::Model>, DbErr> {
@@ -69,14 +91,14 @@ impl Query {
             .order_by_desc(addresses::Column::Balance)
             .limit(limit)
             .offset(offset)
-            .all(db)
+            .all(conn)
             .await
     }
 
     /// Counts the total number of addresses in the database
     ///
     /// # Arguments
-    /// * `db` - The database connection
+    /// * `conn` - The database connection
     ///
     /// # Returns
     /// The total number of addresses as a `u64`
@@ -86,8 +108,8 @@ impl Query {
     /// let total = Query::count_total_addresses(&db).await?;
     /// println!("Total addresses: {}", total);
     /// ```
-    pub async fn count_total_addresses(db: &DbConn) -> Result<u64, DbErr> {
-        Address::find().count(db).await
+    pub async fn count_total_addresses(conn: &DbConn) -> Result<u64, DbErr> {
+        Address::find().count(conn).await
     }
 
     /// Fetches all transactions for an address and the total number of transactions
@@ -95,7 +117,7 @@ impl Query {
     /// This checks both the `from` and `to` columns
     ///
     /// # Arguments
-    /// * `db` - The database connection
+    /// * `conn` - The database connection
     /// * `address` - The address to fetch transactions for
     ///
     /// # Examples
@@ -104,7 +126,7 @@ impl Query {
     /// println!("Total transactions: {}", total);
     /// ```
     pub async fn count_total_transactions_from_address(
-        db: &DbConn,
+        conn: &DbConn,
         address: &str,
     ) -> Result<u64, DbErr> {
         Transaction::find()
@@ -113,7 +135,7 @@ impl Query {
                     .eq(address)
                     .or(transactions::Column::To.eq(address)),
             )
-            .count(db)
+            .count(conn)
             .await
     }
 
@@ -122,7 +144,7 @@ impl Query {
     /// This checks both the `from` and `to` columns
     ///
     /// # Arguments
-    /// * `db` - The database connection
+    /// * `conn` - The database connection
     /// * `address` - The address to fetch transactions for
     ///
     /// # Examples
@@ -130,7 +152,7 @@ impl Query {
     /// let transactions = Query::find_transactions_from_address(&db, "kromernya").await?;
     /// ```
     pub async fn find_transactions_from_address(
-        db: &DbConn,
+        conn: &DbConn,
         address: &str,
     ) -> Result<Vec<transactions::Model>, DbErr> {
         Transaction::find()
@@ -139,7 +161,7 @@ impl Query {
                     .eq(address)
                     .or(transactions::Column::To.eq(address)),
             )
-            .all(db)
+            .all(conn)
             .await
     }
 }

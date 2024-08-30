@@ -6,20 +6,69 @@ use serde_json::json;
 
 use crate::AppState;
 
+#[derive(Debug, serde::Deserialize)]
+struct LimitAndOffset {
+    limit: Option<u64>,
+    offset: Option<u64>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct ShouldFetchNames {
+    should_fetch_names: Option<bool>,
+}
+
 #[get("/")]
-async fn list_addresses(_data: web::Data<AppState>) -> Result<HttpResponse, Error> {
-    Ok(HttpResponse::Ok().body("Hewwo from v1/addresses!!"))
+async fn list_addresses(
+    state: web::Data<AppState>,
+    query: web::Query<LimitAndOffset>,
+) -> Result<HttpResponse, Error> {
+    let query = query.into_inner();
+
+    let conn = &state.conn;
+    let limit = query.limit.unwrap_or(50);
+    let offset = query.offset.unwrap_or(0);
+
+    let addresses = Query::fetch_addresses(conn, limit, offset)
+        .await
+        .map_err(error::ErrorInternalServerError)?;
+    let total = Query::count_total_addresses(conn)
+        .await
+        .map_err(error::ErrorInternalServerError)?;
+
+    let response: Vec<serde_json::Value> = addresses
+        .iter()
+        .map(|model| {
+            json!({
+                "address": model.address,
+                "balance": model.balance,
+                "totalin": model.total_in,
+                "totalout": model.total_out,
+                "firstseen": model.first_seen,
+            })
+        })
+        .collect();
+
+    Ok(HttpResponse::Ok().json(json!({
+        "ok": true,
+        "count": response.len(),
+        "total": total,
+        "addresses": response,
+    })))
 }
 
 #[get("/{address}")]
 async fn get_specific_address(
     state: web::Data<AppState>,
     path: web::Path<String>,
+    query: web::Query<ShouldFetchNames>,
 ) -> Result<HttpResponse, Error> {
-    let conn = &state.conn;
     let address = path.into_inner(); // TODO: Return if invalid address (may not be possible)
+    let query = query.into_inner();
 
-    let addr: Option<addresses::Model> = Query::find_address(conn, &address)
+    let conn = &state.conn;
+    let should_fetch_names = query.should_fetch_names.unwrap_or(false);
+
+    let addr: Option<addresses::Model> = Query::find_address(conn, &address, should_fetch_names)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
@@ -41,12 +90,6 @@ async fn get_specific_address(
             }
         ))),
     }
-}
-
-#[derive(Debug, serde::Deserialize)]
-struct LimitAndOffset {
-    limit: Option<u64>,
-    offset: Option<u64>,
 }
 
 #[get("/rich")]
@@ -99,7 +142,7 @@ async fn get_address_transactions(
 
     let conn = &state.conn;
 
-    let addr = Query::find_address(conn, &address)
+    let addr = Query::find_address(conn, &address, false)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
