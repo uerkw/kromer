@@ -41,7 +41,7 @@ pub async fn start() -> Result<(), std::io::Error> {
             // .default_service(web::route().to(not_found)) // TODO: 404 not found handler.
             .service(hello)
             .service(
-                web::scope("/v1").service(
+                web::scope("/api/v1").service(
                     web::scope("/addresses")
                         .service(routes::v1::addresses::list_addresses)
                         .service(routes::v1::addresses::get_richest_addresses) // This has to be here otherwise /addresses/rich will conflict with /addresses/:address
