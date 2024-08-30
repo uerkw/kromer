@@ -20,7 +20,7 @@ impl Migration {
             .create_index(
                 Index::create()
                     .if_not_exists()
-                    .name("transactions_from")
+                    .name("transactions_to")
                     .table(Transactions::Table)
                     .col(Transactions::To)
                     .to_owned(),
