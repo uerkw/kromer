@@ -1,4 +1,4 @@
-name: Rust
+name: Rust build
 
 on:
   push:
@@ -44,9 +44,6 @@ jobs:
 
       - name: Build
         run: cargo build --release
-
-      - name: List target/release directory (for debugging)
-        run: ls -la target/release
 
       - name: Upload Built Binary
         uses: actions/upload-artifact@v3.2.0-node20
