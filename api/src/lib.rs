@@ -12,8 +12,12 @@ pub struct AppState {
 }
 
 #[get("/")]
-async fn hello(_data: web::Data<AppState>) -> Result<HttpResponse, Error> {
-    Ok(HttpResponse::Ok().body("Hewwo!!"))
+async fn hello() -> HttpResponse {
+    HttpResponse::Ok().body("Hewwo!!")
+}
+
+async fn not_found() -> HttpResponse {
+    HttpResponse::NotFound().body("This is not the page you are looking for")
 }
 
 #[actix_web::main]
@@ -38,9 +42,10 @@ pub async fn start() -> Result<(), std::io::Error> {
             // .service(Fs::new("/static", "./api/static"))
             .app_data(web::Data::new(state.clone()))
             .wrap(middleware::Logger::default()) // enable logger
-            // .default_service(web::route().to(not_found)) // TODO: 404 not found handler.
+            .default_service(web::route().to(not_found))
             .service(hello)
             .service(
+                // TODO: Use `configure` instead, https://actix.rs/docs/application/#configure
                 web::scope("/api/v1").service(
                     web::scope("/addresses")
                         .service(routes::v1::addresses::list_addresses)
