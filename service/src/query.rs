@@ -1,5 +1,6 @@
 use ::kromer_economy_entity::{
     addresses, addresses::Entity as Address, transactions, transactions::Entity as Transaction,
+    names, names::Entity as Name,
 };
 use sea_orm::*;
 
@@ -161,6 +162,31 @@ impl Query {
                     .eq(address)
                     .or(transactions::Column::To.eq(address)),
             )
+            .all(conn)
+            .await
+    }
+
+    pub async fn count_names_owned_by_address(
+        conn: &DbConn,
+        address: &str,
+    ) -> Result<u64, DbErr> {
+        Name::find()
+            .filter(names::Column::Owner.eq(address))
+            .count(conn)
+            .await
+    }
+
+    pub async fn find_names_owned_by_address(
+        conn: &DbConn,
+        address: &str,
+        limit: u64,
+        offset: u64,
+    ) -> Result<Vec<names::Model>, DbErr> {
+        Name::find()
+            .filter(names::Column::Owner.eq(address))
+            .order_by_asc(names::Column::Name)
+            .limit(limit)
+            .offset(offset)
             .all(conn)
             .await
     }
