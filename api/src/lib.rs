@@ -48,20 +48,21 @@ pub async fn start() -> Result<(), std::io::Error> {
             .service(hello)
             .service(
                 // TODO: Use `configure` instead, https://actix.rs/docs/application/#configure
-                web::scope("/api/v1").service(
-                    web::scope("/addresses")
-                        .service(routes::v1::addresses::list_addresses)
-                        .service(routes::v1::addresses::get_richest_addresses) // This has to be here otherwise /addresses/rich will conflict with /addresses/:address
-                        .service(routes::v1::addresses::get_specific_address)
-                        .service(routes::v1::addresses::get_address_names)
-                        .service(routes::v1::addresses::get_address_transactions)
-                        .service(routes::v1::login)
-                        .service(routes::v1::motd)
-                        .service(routes::v1::walletversion)
-                        .service(routes::v1::whats_new)
-                        .service(routes::v1::kromer_supply)
-                        .service(routes::v1::get_v2_wallet),
-                ),
+                web::scope("/api/v1")
+                    .service(
+                        web::scope("/addresses")
+                            .service(routes::v1::addresses::list_addresses)
+                            .service(routes::v1::addresses::get_richest_addresses) // This has to be here otherwise /addresses/rich will conflict with /addresses/:address
+                            .service(routes::v1::addresses::get_specific_address)
+                            .service(routes::v1::addresses::get_address_names)
+                            .service(routes::v1::addresses::get_address_transactions),
+                    )
+                    .service(routes::v1::login) // This does not work?
+                    .service(routes::v1::motd)
+                    .service(routes::v1::walletversion)
+                    .service(routes::v1::whats_new)
+                    .service(routes::v1::kromer_supply)
+                    .service(routes::v1::get_v2_wallet),
             )
     })
     .bind(&server_url)?
