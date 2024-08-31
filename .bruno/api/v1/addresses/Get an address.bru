@@ -1,0 +1,29 @@
+meta {
+  name: Get an address
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/addresses/:address
+  body: none
+  auth: none
+}
+
+params:query {
+  ~fetchNames: true
+}
+
+params:path {
+  address: 
+}
+
+assert {
+  res.body.ok: eq true
+  res.body.address: isDefined
+  res.body.address.address: isString
+  res.body.address.balance: isNumber
+  res.body.address.totalin: isNumber
+  res.body.address.totalout: isNumber
+  res.body.address.firstseen: isString
+}

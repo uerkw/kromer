@@ -1,0 +1,22 @@
+meta {
+  name: List all addresses
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/addresses/
+  body: none
+  auth: none
+}
+
+params:query {
+  ~limit: 50
+  ~offset: 0
+}
+
+assert {
+  res.body.ok: eq true
+  res.body.count: isDefined
+  res.body.total: isDefined
+}

@@ -1,0 +1,22 @@
+meta {
+  name: Authenticate an address
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "privatekey": "key"
+  }
+}
+
+assert {
+  res.body.ok: eq true
+  res.body.address: isDefined
+}

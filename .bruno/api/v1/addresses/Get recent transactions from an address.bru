@@ -1,0 +1,21 @@
+meta {
+  name: Get recent transactions from an address
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/addresses/:address/transactions?offset=0
+  body: none
+  auth: none
+}
+
+params:query {
+  offset: 0
+  ~excludeMined: false
+  ~limit: 50
+}
+
+params:path {
+  address: 
+}

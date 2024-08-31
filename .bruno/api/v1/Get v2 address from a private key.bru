@@ -1,0 +1,17 @@
+meta {
+  name: Get v2 address from a private key
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/v2
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "privatekey": "keyhere"
+  }
+}

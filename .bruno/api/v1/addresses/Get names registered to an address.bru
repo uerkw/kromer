@@ -1,0 +1,20 @@
+meta {
+  name: Get names registered to an address
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/v1/addresses/:address/names
+  body: none
+  auth: none
+}
+
+params:query {
+  ~limit: 50
+  ~offset: 0
+}
+
+params:path {
+  address: 
+}
