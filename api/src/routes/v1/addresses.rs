@@ -133,6 +133,7 @@ async fn get_richest_addresses(
     })))
 }
 
+// This is missing the `excludeMined` query paramater, we don't have mining.
 #[get("/{address}/transactions")]
 async fn get_address_transactions(
     state: web::Data<AppState>,
