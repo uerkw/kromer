@@ -50,5 +50,5 @@ jobs:
         with:
           name: built-binary
           path: |
-            target/release/*
+            target/release/kromer-economy
           if-no-files-found: error
