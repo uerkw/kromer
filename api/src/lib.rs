@@ -1,6 +1,6 @@
 mod routes;
 
-use actix_web::{get, middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer, Result};
+use actix_web::{get, middleware, web, App, HttpRequest, HttpResponse, HttpServer, Result};
 use std::env;
 
 use kromer_economy_migration::{Migrator, MigratorTrait};
