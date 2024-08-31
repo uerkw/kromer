@@ -15,6 +15,7 @@ pub struct Model {
     pub name: Option<String>,
     pub sent_metaname: Option<String>,
     pub sent_name: Option<String>,
+    pub metadata: Option<String>,
     #[sea_orm(unique)]
     pub request_id: Uuid,
 }
