@@ -1,6 +1,6 @@
 mod routes;
 
-use actix_web::{get, middleware, web, App, Error, HttpResponse, HttpServer, Result};
+use actix_web::{get, middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer, Result};
 use std::env;
 
 use kromer_economy_migration::{Migrator, MigratorTrait};
@@ -16,8 +16,10 @@ async fn hello() -> HttpResponse {
     HttpResponse::Ok().body("Hewwo!!")
 }
 
-async fn not_found() -> HttpResponse {
-    HttpResponse::NotFound().body("This is not the page you are looking for")
+async fn not_found(request: HttpRequest) -> HttpResponse {
+    let body = format!("Resource {} not found.", request.uri().path());
+
+    HttpResponse::NotFound().body(body)
 }
 
 #[actix_web::main]
