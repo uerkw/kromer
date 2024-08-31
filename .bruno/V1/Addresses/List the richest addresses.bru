@@ -1,0 +1,26 @@
+meta {
+  name: List the richest addresses
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/addresses/rich?limit=50&offset=0
+  body: none
+  auth: none
+}
+
+params:query {
+  limit: 50
+  offset: 0
+}
+
+assert {
+  res.status: eq 200
+  res.body.ok: eq true
+  res.body.count: isDefined
+  res.body.total: isDefined
+  res.body.addresses: isArray
+  res.body.addresses[0]: isDefined
+  res.body.addresses[0].address: isString
+}
