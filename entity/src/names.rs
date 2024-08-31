@@ -14,7 +14,7 @@ pub struct Model {
     pub registered: DateTimeWithTimeZone,
     pub updated: Option<Date>,
     pub transferred: Option<Date>,
-    pub a: Option<String>,
+    pub metadata: Option<String>,
     #[sea_orm(column_type = "Float")]
     pub unpaid: f32,
 }

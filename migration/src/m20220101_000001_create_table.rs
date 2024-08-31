@@ -238,7 +238,7 @@ impl MigrationTrait for Migration {
                     .col(timestamp(Names::Registered).timestamp_with_time_zone())
                     .col(ColumnDef::new(Names::Updated).date().null())
                     .col(ColumnDef::new(Names::Transferred).date().null())
-                    .col(ColumnDef::new(Names::A).string_len(255).null())
+                    .col(ColumnDef::new(Names::Metadata).string_len(255).null())
                     .col(float(Names::Unpaid))
                     .to_owned(),
             )
@@ -303,6 +303,6 @@ enum Names {
     Registered,
     Updated,
     Transferred,
-    A,
+    Metadata, // Called `a` in Krist.
     Unpaid,
 }
