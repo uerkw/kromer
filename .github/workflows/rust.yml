@@ -14,13 +14,44 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
+      # Cache cargo registry
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+
+      # Cache cargo index
+      - name: Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-index-
+
+      # Cache target directory (compiled dependencies and outputs)
+      - name: Cache built dependencies
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-
+
       - name: Build
-        run: cargo build --verbose --release
+        run: cargo build --release
 
       - name: List target/release directory (for debugging)
         run: ls -la target/release
 
-      - name: Upload Build Artifacts
+      - name: Upload Built Binary
         uses: actions/upload-artifact@v3.2.0-node20
         with:
-          path: target/release/**
+          name: built-binary
+          path: |
+            target/release/*
+          if-no-files-found: error
