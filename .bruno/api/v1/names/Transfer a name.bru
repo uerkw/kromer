@@ -1,0 +1,22 @@
+meta {
+  name: Transfer a name
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/names/:name/transfer
+  body: json
+  auth: none
+}
+
+params:path {
+  name: 
+}
+
+body:json {
+  {
+    "address": "address-to-send-to",
+    "privatekey": "your-privkey"
+  }
+}

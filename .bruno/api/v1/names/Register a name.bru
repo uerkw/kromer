@@ -1,0 +1,21 @@
+meta {
+  name: Register a name
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/names/:name
+  body: json
+  auth: none
+}
+
+params:path {
+  name: 
+}
+
+body:json {
+  {
+    "privatekey": "keyhere"
+  }
+}
