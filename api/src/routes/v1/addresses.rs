@@ -190,10 +190,54 @@ async fn get_address_transactions(
 
 #[get("/{address}/names")]
 async fn get_address_names(
-    _state: web::Data<AppState>,
+    state: web::Data<AppState>,
     address: web::Path<String>,
+    path: web::Query<LimitAndOffset>,
 ) -> Result<HttpResponse, Error> {
     let address = address.into_inner();
 
-    Ok(HttpResponse::Ok().body(address))
+    let path = path.into_inner();
+    let limit = path.limit.unwrap_or(50);
+    let offset = path.offset.unwrap_or(0);
+
+    let conn = &state.conn;
+
+    let addr = Query::find_address(conn, &address, false)
+        .await
+        .map_err(error::ErrorInternalServerError)?;
+
+    if addr.is_none() {
+        return Ok(HttpResponse::Ok().json(json!({
+            "ok": false,
+            "error": "address_not_found"
+        })));
+    }
+
+    let names_count = Query::count_names_owned_by_address(conn, &address)
+        .await
+        .map_err(error::ErrorInternalServerError)?;
+
+    let names = Query::find_names_owned_by_address(conn, &address, limit, offset)
+        .await
+        .map_err(error::ErrorInternalServerError)?;
+
+    let response: Vec<serde_json::Value> = names
+        .into_iter()
+        .map(|name| {
+            json!({
+                "name": name.name,
+                "owner": name.owner,
+                "registered": name.registered,
+                "updated": name.updated,
+                "a": name.a, // This might need to be changed at some point
+            })
+        })
+        .collect();
+
+    Ok(HttpResponse::Ok().json(json!({
+        "ok": true,
+        "count": response.len(),
+        "total": names_count,
+        "names": response,
+    })))
 }
