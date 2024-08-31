@@ -4,13 +4,7 @@ use kromer_economy_entity::addresses;
 use kromer_economy_service::Query;
 use serde_json::json;
 
-use crate::AppState;
-
-#[derive(Debug, serde::Deserialize)]
-struct LimitAndOffset {
-    limit: Option<u64>,
-    offset: Option<u64>,
-}
+use crate::{routes::LimitAndOffset, AppState};
 
 #[derive(Debug, serde::Deserialize)]
 struct ShouldFetchNames {
@@ -228,7 +222,7 @@ async fn get_address_names(
                 "owner": name.owner,
                 "registered": name.registered,
                 "updated": name.updated,
-                "a": name.a, // This might need to be changed at some point
+                "a": name.metadata, // This might need to be changed at some point
             })
         })
         .collect();
