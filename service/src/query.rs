@@ -1,6 +1,6 @@
 use ::kromer_economy_entity::{
-    addresses, addresses::Entity as Address, transactions, transactions::Entity as Transaction,
-    names, names::Entity as Name,
+    addresses, addresses::Entity as Address, names, names::Entity as Name, transactions,
+    transactions::Entity as Transaction,
 };
 use sea_orm::*;
 
@@ -39,7 +39,11 @@ impl Query {
         let limit = limit.clamp(1, 1000); // NOTE: Even though this can panic, min is not above max so we are fine.
 
         // TODO: Add support for fetching name count.
-        let addresses = Address::find().limit(limit).offset(offset).all(conn).await?;
+        let addresses = Address::find()
+            .limit(limit)
+            .offset(offset)
+            .all(conn)
+            .await?;
 
         Ok(addresses)
     }
@@ -57,7 +61,7 @@ impl Query {
     pub async fn find_address(
         conn: &DbConn,
         address: &str,
-        _should_fetch_names: bool
+        _should_fetch_names: bool,
     ) -> Result<Option<addresses::Model>, DbErr> {
         // TODO: Add support for fetching name count.
         Address::find()
@@ -166,10 +170,7 @@ impl Query {
             .await
     }
 
-    pub async fn count_names_owned_by_address(
-        conn: &DbConn,
-        address: &str,
-    ) -> Result<u64, DbErr> {
+    pub async fn count_names_owned_by_address(conn: &DbConn, address: &str) -> Result<u64, DbErr> {
         Name::find()
             .filter(names::Column::Owner.eq(address))
             .count(conn)
