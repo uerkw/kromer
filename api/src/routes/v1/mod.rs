@@ -3,6 +3,7 @@ use actix_web::{get, post, web, Error, HttpResponse};
 use crate::AppState;
 
 pub mod addresses;
+pub mod names;
 
 #[derive(Debug, serde::Deserialize)]
 struct LoginDetails {
