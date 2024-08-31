@@ -24,15 +24,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-registry-
 
-      # Cache cargo index
-      - name: Cache cargo index
-        uses: actions/cache@v3
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-index-
-
       # Cache target directory (compiled dependencies and outputs)
       - name: Cache built dependencies
         uses: actions/cache@v3
