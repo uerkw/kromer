@@ -1,13 +1,9 @@
-use kromer_economy_entity::{
-    addresses, addresses::Entity as Address, names, names::Entity as Name, transactions,
-    transactions::Entity as Transaction,
-};
+use kromer_economy_entity::{names, names::Entity as Name};
 
 use sea_orm::*;
 
 /// A helper struct that houses methods related to names
 pub struct NameController;
-
 
 impl NameController {
     /// Fetches the total number of names owned by an address

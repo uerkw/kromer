@@ -1,13 +1,9 @@
-use kromer_economy_entity::{
-    addresses, addresses::Entity as Address, names, names::Entity as Name, transactions,
-    transactions::Entity as Transaction,
-};
+use kromer_economy_entity::transactions::Entity as Transaction;
 
 use sea_orm::*;
 
 /// A helper struct that houses methods related to transactions
 pub struct TransactionController;
-
 
 impl TransactionController {
     /// Fetches the total number of transactions
