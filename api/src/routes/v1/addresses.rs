@@ -18,7 +18,7 @@ struct ShouldFetchNames {
 }
 
 // Actix requires there to be a trailing slash, we do not want this.
-#[get("/")]
+#[get("/addresses")]
 async fn list_addresses(
     state: web::Data<AppState>,
     query: web::Query<LimitAndOffset>,
