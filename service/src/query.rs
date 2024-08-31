@@ -35,7 +35,7 @@ impl Query {
         offset: u64,
     ) -> Result<Vec<addresses::Model>, DbErr> {
         // Clamp limit to be minimum 1 and maximum 1000
-        let limit = limit.min(1).max(1000);
+        let limit = limit.clamp(1, 1000); // NOTE: Even though this can panic, min is not above max so we are fine.
 
         // TODO: Add support for fetching name count.
         let addresses = Address::find().limit(limit).offset(offset).all(conn).await?;
