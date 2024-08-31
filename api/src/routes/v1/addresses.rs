@@ -1,7 +1,9 @@
 use actix_web::{error, get, web, Error, HttpResponse, Result};
 
 use kromer_economy_entity::addresses;
-use kromer_economy_service::Query;
+use kromer_economy_service::controller::{
+    AddressController, NameController, TransactionController,
+};
 use serde_json::json;
 
 use crate::{routes::LimitAndOffset, AppState};
@@ -22,10 +24,10 @@ async fn list_addresses(
     let limit = query.limit.unwrap_or(50);
     let offset = query.offset.unwrap_or(0);
 
-    let addresses = Query::fetch_addresses(conn, limit, offset)
+    let addresses = AddressController::addresses(conn, limit, offset)
         .await
         .map_err(error::ErrorInternalServerError)?;
-    let total = Query::count_total_addresses(conn)
+    let total = AddressController::count(conn)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
@@ -62,7 +64,7 @@ async fn get_specific_address(
     let conn = &state.conn;
     let should_fetch_names = query.should_fetch_names.unwrap_or(false);
 
-    let addr: Option<addresses::Model> = Query::find_address(conn, &address, should_fetch_names)
+    let addr = AddressController::fetch_address(conn, &address, should_fetch_names)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
@@ -97,12 +99,11 @@ async fn get_richest_addresses(
 
     let conn = &state.conn;
 
-    let richest_addresses: Vec<addresses::Model> =
-        Query::find_richest_addresses(conn, limit, offset)
-            .await
-            .map_err(error::ErrorInternalServerError)?;
+    let richest_addresses: Vec<addresses::Model> = AddressController::richest(conn, limit, offset)
+        .await
+        .map_err(error::ErrorInternalServerError)?;
 
-    let total = Query::count_total_addresses(conn)
+    let total = AddressController::count(conn)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
@@ -137,7 +138,7 @@ async fn get_address_transactions(
 
     let conn = &state.conn;
 
-    let addr = Query::find_address(conn, &address, false)
+    let addr = AddressController::fetch_address(conn, &address, false)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
@@ -149,10 +150,10 @@ async fn get_address_transactions(
     }
 
     // Im not particularly sure about the function name here
-    let transaction_count = Query::count_total_transactions_from_address(conn, &address)
+    let transactions = AddressController::transactions(conn, &address)
         .await
         .map_err(error::ErrorInternalServerError)?;
-    let transactions = Query::find_transactions_from_address(conn, &address)
+    let transaction_count = TransactionController::count(conn)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
@@ -195,7 +196,7 @@ async fn get_address_names(
 
     let conn = &state.conn;
 
-    let addr = Query::find_address(conn, &address, false)
+    let addr = AddressController::fetch_address(conn, &address, false)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
@@ -206,11 +207,11 @@ async fn get_address_names(
         })));
     }
 
-    let names_count = Query::count_names_owned_by_address(conn, &address)
+    let names_count = NameController::names_owned_by_address(conn, &address)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
-    let names = Query::find_names_owned_by_address(conn, &address, limit, offset)
+    let names = AddressController::names(conn, &address, limit, offset)
         .await
         .map_err(error::ErrorInternalServerError)?;
 

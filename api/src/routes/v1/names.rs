@@ -52,9 +52,7 @@ async fn register_name(
 
 // https://krist.dev/docs/#api-NameGroup-GetNameCost
 #[get("/cost")]
-async fn get_cost_of_name(
-    state: web::Data<AppState>,
-) -> Result<HttpResponse, Error> {
+async fn get_cost_of_name(state: web::Data<AppState>) -> Result<HttpResponse, Error> {
     // TODO: Make this cost configurable. Could use redis like Krist did or just use postgres
     //       Redis is more lightweight though.
     todo!()
@@ -62,9 +60,6 @@ async fn get_cost_of_name(
 
 // https://krist.dev/docs/#api-NameGroup-GetNewNames
 #[get("/new")]
-async fn get_newest_names(
-    state: web::Data<AppState>,
-) -> Result<HttpResponse, Error> {
-
+async fn get_newest_names(state: web::Data<AppState>) -> Result<HttpResponse, Error> {
     todo!()
 }

@@ -1,7 +1,3 @@
-mod mutation;
-mod query;
-
-pub use mutation::*;
-pub use query::*;
+pub mod controller;
 
 pub use sea_orm;

@@ -5,17 +5,17 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/api/v1/addresses/:address/transactions?offset=0
+  url: {{baseUrl}}/api/v1/addresses/:address/transactions
   body: none
   auth: none
 }
 
 params:query {
-  offset: 0
+  ~offset: 0
   ~excludeMined: false
   ~limit: 50
 }
 
 params:path {
-  address: 
+  address: kkkkkkkkk1
 }
