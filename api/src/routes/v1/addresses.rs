@@ -236,3 +236,11 @@ async fn get_address_names(
         "names": response,
     })))
 }
+
+pub fn routes(cfg: &mut web::ServiceConfig) {
+    cfg.service(list_addresses);
+    cfg.service(get_specific_address);
+    cfg.service(get_address_transactions);
+    cfg.service(get_address_names);
+    cfg.service(get_richest_addresses);
+}

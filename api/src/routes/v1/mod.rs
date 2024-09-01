@@ -48,3 +48,12 @@ async fn get_v2_wallet(
 ) -> Result<HttpResponse, Error> {
     Ok(HttpResponse::Ok().body("Hewwo!!"))
 }
+
+pub fn routes(cfg: &mut web::ServiceConfig) {
+    cfg.service(login);
+    cfg.service(motd);
+    cfg.service(walletversion);
+    cfg.service(whats_new);
+    cfg.service(kromer_supply);
+    cfg.service(get_v2_wallet);
+}

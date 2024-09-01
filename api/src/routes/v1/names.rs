@@ -226,3 +226,10 @@ async fn get_newest_names(
         "names": response,
     })))
 }
+
+pub fn routes(cfg: &mut web::ServiceConfig) {
+    cfg.service(get_specific_name);
+    cfg.service(register_name);
+    cfg.service(get_cost_of_name);
+    cfg.service(get_newest_names);
+}

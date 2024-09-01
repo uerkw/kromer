@@ -50,33 +50,7 @@ pub async fn start() -> Result<(), std::io::Error> {
             .wrap(middleware::Logger::default()) // enable logger
             .default_service(web::route().to(not_found))
             .service(hello)
-            .service(
-                // TODO: Use `configure` instead, https://actix.rs/docs/application/#configure
-                web::scope("/api/v1")
-                    .service(
-                        web::scope("/addresses")
-                            .service(routes::v1::addresses::list_addresses)
-                            .service(routes::v1::addresses::get_richest_addresses) // This has to be here otherwise /addresses/rich will conflict with /addresses/:address
-                            .service(routes::v1::addresses::get_specific_address)
-                            .service(routes::v1::addresses::get_address_names)
-                            .service(routes::v1::addresses::get_address_transactions),
-                    )
-                    .service(
-                        web::scope("/names")
-                            .service(routes::v1::names::list_names)
-                            .service(routes::v1::names::check_name_availability)
-                            .service(routes::v1::names::register_name)
-                            .service(routes::v1::names::get_newest_names)
-                            .service(routes::v1::names::get_cost_of_name)
-                            .service(routes::v1::names::get_specific_name),
-                    )
-                    .service(routes::v1::login) // This does not work?
-                    .service(routes::v1::motd)
-                    .service(routes::v1::walletversion)
-                    .service(routes::v1::whats_new)
-                    .service(routes::v1::kromer_supply)
-                    .service(routes::v1::get_v2_wallet),
-            )
+            .configure(routes::routes)
     })
     .bind(&server_url)?
     .run()
