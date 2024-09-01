@@ -4,11 +4,13 @@ mod address;
 mod name;
 mod transaction;
 mod generic;
+mod routes;
 
 pub use address::*;
 pub use name::*;
 pub use transaction::*;
 pub use generic::*;
+pub use routes::*;
 
 #[derive(Debug, thiserror::Error)]
 pub enum KromerError {
@@ -26,6 +28,9 @@ pub enum KromerError {
 
     #[error("")]
     Database(#[from] sea_orm::DbErr),
+
+    #[error("")]
+    Routes(#[from] routes::RoutesError),
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -49,8 +54,8 @@ impl error::ResponseError for KromerError {
             KromerError::Address(e) => e.status_code(),
             KromerError::Name(e) => e.status_code(),
             KromerError::Transaction(e) => e.status_code(),
+            KromerError::Routes(e) => e.status_code(),
             KromerError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
-
         }
     }
 
@@ -60,6 +65,7 @@ impl error::ResponseError for KromerError {
             KromerError::Address(e) => e.error_response(),
             KromerError::Name(e) => e.error_response(),
             KromerError::Transaction(e) => e.error_response(),
+            KromerError::Routes(e) => e.error_response(),
             KromerError::Database(e) => {
                 let error = ErrorResponse {
                     ok: false,

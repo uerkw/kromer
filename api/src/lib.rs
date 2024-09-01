@@ -2,6 +2,7 @@ mod routes;
 pub mod errors;
 
 use actix_web::{get, middleware, web, App, HttpRequest, HttpResponse, HttpServer, Result};
+use errors::KromerError;
 use std::env;
 
 use kromer_economy_migration::{Migrator, MigratorTrait};
@@ -18,10 +19,9 @@ async fn hello() -> HttpResponse {
     HttpResponse::Ok().body("Hewwo!!")
 }
 
-async fn not_found(request: HttpRequest) -> HttpResponse {
-    let body = format!("Resource {} not found.", request.uri().path());
-
-    HttpResponse::NotFound().body(body)
+// Unfortunate how HttpResponse is required, lol
+async fn not_found() -> Result<HttpResponse, KromerError> {
+    Err(KromerError::Routes(errors::RoutesError::NotFound))
 }
 
 #[actix_web::main]
