@@ -65,10 +65,10 @@ pub async fn start() -> Result<(), std::io::Error> {
                         web::scope("/names")
                             .service(routes::v1::names::list_names)
                             .service(routes::v1::names::check_name_availability)
-                            .service(routes::v1::names::get_specific_name)
                             .service(routes::v1::names::register_name)
                             .service(routes::v1::names::get_newest_names)
-                            .service(routes::v1::names::get_cost_of_name),
+                            .service(routes::v1::names::get_cost_of_name)
+                            .service(routes::v1::names::get_specific_name),
                     )
                     .service(routes::v1::login) // This does not work?
                     .service(routes::v1::motd)
