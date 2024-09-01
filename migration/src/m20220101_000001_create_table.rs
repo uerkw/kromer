@@ -245,8 +245,6 @@ impl MigrationTrait for Migration {
             .await?;
 
         Migration::create_name_indexes(manager).await
-
-        // TODO: Indexes
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {

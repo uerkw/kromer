@@ -157,7 +157,7 @@ async fn get_address_transactions(
         .await
         .map_err(error::ErrorInternalServerError)?;
 
-    // TODO: This is missing 2 fields, `metadata` and `type`, type can be `transfer`, `name_purchase`, `name_a_record`, or `name_transfer`. `metadata` is the CommonMeta shit.
+    // TODO: This is missing the field `type`, type can be `transfer`, `name_purchase`, `name_a_record`, or `name_transfer`.
     let response: Vec<serde_json::Value> = transactions
         .into_iter()
         .map(|tx| {
@@ -170,6 +170,7 @@ async fn get_address_transactions(
                 "name": tx.name,
                 "sent_metaname": tx.sent_metaname,
                 "sent_name": tx.sent_name,
+                "metadata": tx.metadata,
             })
         })
         .collect();
