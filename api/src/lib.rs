@@ -60,6 +60,7 @@ pub async fn start() -> Result<(), std::io::Error> {
                     .service(
                         web::scope("/names")
                             .service(routes::v1::names::list_names)
+                            .service(routes::v1::names::check_name_availability)
                     )
                     .service(routes::v1::login) // This does not work?
                     .service(routes::v1::motd)
