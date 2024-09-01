@@ -1,4 +1,6 @@
-use actix_web::{get, post, web, Error, HttpResponse};
+use actix_web::{error, get, post, web, Error, HttpResponse};
+use kromer_economy_service::controller::NameController;
+use serde_json::json;
 
 use crate::{routes::LimitAndOffset, AppState};
 
@@ -8,7 +10,40 @@ async fn list_names(
     state: web::Data<AppState>,
     query: web::Query<LimitAndOffset>,
 ) -> Result<HttpResponse, Error> {
-    todo!()
+    let query = query.into_inner();
+
+    let conn = &state.conn;
+
+    let limit = query.limit.unwrap_or(50);
+    let offset = query.offset.unwrap_or(0);
+
+    let names = NameController::list_names(conn, limit, offset)
+        .await
+        .map_err(error::ErrorInternalServerError)?;
+
+    let total = NameController::count(conn)
+        .await
+        .map_err(error::ErrorInternalServerError)?;
+
+    let response: Vec<serde_json::Value> = names
+        .into_iter()
+        .map(|name| {
+            json!({
+                "name": name.name,
+                "owner": name.owner,
+                "registered": name.registered,
+                "updated": name.updated,
+                "a": name.metadata,
+            })
+        })
+        .collect();
+
+    Ok(HttpResponse::Ok().json(json!({
+        "ok": true,
+        "count": response.len(),
+        "total": total,
+        "names": response,
+    })))
 }
 
 // https://krist.dev/docs/#api-NameGroup-CheckName

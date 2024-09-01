@@ -57,6 +57,10 @@ pub async fn start() -> Result<(), std::io::Error> {
                             .service(routes::v1::addresses::get_address_names)
                             .service(routes::v1::addresses::get_address_transactions),
                     )
+                    .service(
+                        web::scope("/names")
+                            .service(routes::v1::names::list_names)
+                    )
                     .service(routes::v1::login) // This does not work?
                     .service(routes::v1::motd)
                     .service(routes::v1::walletversion)
