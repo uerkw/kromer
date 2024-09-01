@@ -6,7 +6,8 @@ use crate::{routes::LimitAndOffset, AppState};
 
 #[derive(serde::Deserialize)]
 struct RegisterNameRequest {
-    privatekey: String,
+    #[serde(rename = "privatekey")]
+    private_key: String,
 }
 
 // https://krist.dev/docs/#api-NameGroup-GetNames
@@ -81,7 +82,7 @@ async fn get_specific_name(
     path: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
     let name = path.into_inner();
-    
+
     let conn = &state.conn;
 
     match NameController::get_name(conn, &name).await {
@@ -118,8 +119,8 @@ async fn register_name(
     let conn = &state.conn;
 
     // TODO: Implement proper authentication and address get from private key
-    let _private_key = &body.privatekey;
-    let owner_address = "TODO_GET_ADDRESS_FROM_PRIVATE_KEY";
+    let _private_key = &body.private_key;
+    let owner_address = "TODO_GET_ADDRESS_FROM_PRIVATE_KEY"; // TODO: Get address from private key, should return address model.
 
     let name_available = NameController::is_name_available(conn, &name)
         .await
@@ -150,7 +151,7 @@ async fn register_name(
     // }
 
     let registration = NameRegistration {
-        name: name.clone(),
+        name,
         owner,
     };
 
@@ -162,8 +163,11 @@ async fn register_name(
             Ok(HttpResponse::Ok().json(json!({
                 "ok": true,
             })))
-        },
-        Err(e) => Err(error::ErrorInternalServerError(format!("Failed to register name: {}", e))),
+        }
+        Err(e) => Err(error::ErrorInternalServerError(format!(
+            "Failed to register name: {}",
+            e
+        ))),
     }
 }
 
@@ -185,7 +189,7 @@ async fn get_newest_names(
     query: web::Query<LimitAndOffset>,
 ) -> Result<HttpResponse, Error> {
     let query = query.into_inner();
-    
+
     let conn = &state.conn;
 
     let limit = query.limit.unwrap_or(50);
