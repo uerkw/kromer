@@ -1,4 +1,4 @@
-use actix_web::{error, get, web, Error, HttpResponse, Result};
+use actix_web::{get, web, Error, HttpResponse, Result};
 
 use kromer_economy_entity::addresses;
 use kromer_economy_service::controller::{
@@ -6,6 +6,7 @@ use kromer_economy_service::controller::{
 };
 use serde_json::json;
 
+use crate::errors::{AddressError, KromerError};
 use crate::{routes::LimitAndOffset, AppState};
 
 #[derive(Debug, serde::Deserialize)]
@@ -17,7 +18,7 @@ struct ShouldFetchNames {
 async fn list_addresses(
     state: web::Data<AppState>,
     query: web::Query<LimitAndOffset>,
-) -> Result<HttpResponse, Error> {
+) -> Result<HttpResponse, KromerError> {
     let query = query.into_inner();
 
     let conn = &state.conn;
@@ -26,10 +27,10 @@ async fn list_addresses(
 
     let addresses = AddressController::addresses(conn, limit, offset)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
     let total = AddressController::count(conn)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
 
     let response: Vec<serde_json::Value> = addresses
         .iter()
@@ -57,7 +58,7 @@ async fn get_specific_address(
     state: web::Data<AppState>,
     path: web::Path<String>,
     query: web::Query<ShouldFetchNames>,
-) -> Result<HttpResponse, Error> {
+) -> Result<HttpResponse, KromerError> {
     let address = path.into_inner(); // TODO: Return if invalid address (may not be possible)
     let query = query.into_inner();
 
@@ -66,7 +67,7 @@ async fn get_specific_address(
 
     let addr = AddressController::fetch_address(conn, &address, should_fetch_names)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
 
     // Kinda cursed but it works
     match addr {
@@ -92,7 +93,7 @@ async fn get_specific_address(
 async fn get_richest_addresses(
     state: web::Data<AppState>,
     path: web::Query<LimitAndOffset>,
-) -> Result<HttpResponse, Error> {
+) -> Result<HttpResponse, KromerError> {
     let path = path.into_inner();
     let limit = path.limit.unwrap_or(50);
     let offset = path.offset.unwrap_or(0);
@@ -101,11 +102,11 @@ async fn get_richest_addresses(
 
     let richest_addresses: Vec<addresses::Model> = AddressController::richest(conn, limit, offset)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
 
     let total = AddressController::count(conn)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
 
     let response: Vec<serde_json::Value> = richest_addresses
         .into_iter()
@@ -133,29 +134,26 @@ async fn get_richest_addresses(
 async fn get_address_transactions(
     state: web::Data<AppState>,
     address: web::Path<String>,
-) -> Result<HttpResponse, Error> {
+) -> Result<HttpResponse, KromerError> {
     let address = address.into_inner(); // TODO: Return if invalid address (may not be possible)
 
     let conn = &state.conn;
 
     let addr = AddressController::fetch_address(conn, &address, false)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
 
     if addr.is_none() {
-        return Ok(HttpResponse::Ok().json(json!({
-            "ok": false,
-            "error": "address_not_found"
-        })));
+        return Err(KromerError::Address(AddressError::NotFound(address)).into());
     }
 
     // Im not particularly sure about the function name here
     let transactions = AddressController::transactions(conn, &address)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
     let transaction_count = TransactionController::count(conn)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
 
     // TODO: This is missing the field `type`, type can be `transfer`, `name_purchase`, `name_a_record`, or `name_transfer`.
     let response: Vec<serde_json::Value> = transactions
@@ -188,7 +186,7 @@ async fn get_address_names(
     state: web::Data<AppState>,
     address: web::Path<String>,
     path: web::Query<LimitAndOffset>,
-) -> Result<HttpResponse, Error> {
+) -> Result<HttpResponse, KromerError> {
     let address = address.into_inner();
 
     let path = path.into_inner();
@@ -199,22 +197,19 @@ async fn get_address_names(
 
     let addr = AddressController::fetch_address(conn, &address, false)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
 
     if addr.is_none() {
-        return Ok(HttpResponse::Ok().json(json!({
-            "ok": false,
-            "error": "address_not_found"
-        })));
+        return Err(KromerError::Address(AddressError::NotFound(address)).into());
     }
 
     let names_count = NameController::names_owned_by_address(conn, &address)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
 
     let names = AddressController::names(conn, &address, limit, offset)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
 
     let response: Vec<serde_json::Value> = names
         .into_iter()

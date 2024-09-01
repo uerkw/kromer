@@ -2,6 +2,7 @@ use actix_web::{error, get, post, web, Error, HttpResponse};
 use kromer_economy_service::controller::{AddressController, NameController, NameRegistration};
 use serde_json::json;
 
+use crate::errors::{AddressError, KromerError, NameError};
 use crate::{routes::LimitAndOffset, AppState};
 
 #[derive(serde::Deserialize)]
@@ -15,7 +16,7 @@ struct RegisterNameRequest {
 async fn list_names(
     state: web::Data<AppState>,
     query: web::Query<LimitAndOffset>,
-) -> Result<HttpResponse, Error> {
+) -> Result<HttpResponse, KromerError> {
     let query = query.into_inner();
 
     let conn = &state.conn;
@@ -25,11 +26,11 @@ async fn list_names(
 
     let names = NameController::list_names(conn, limit, offset)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
 
     let total = NameController::name_count(conn)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
 
     let response: Vec<serde_json::Value> = names
         .into_iter()
@@ -60,14 +61,14 @@ async fn list_names(
 async fn check_name_availability(
     state: web::Data<AppState>,
     path: web::Path<String>,
-) -> Result<HttpResponse, Error> {
+) -> Result<HttpResponse, KromerError> {
     let name = path.into_inner();
 
     let conn = &state.conn;
 
     let is_available = NameController::is_name_available(conn, &name)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
 
     Ok(HttpResponse::Ok().json(json!({
         "ok": true,
@@ -80,7 +81,7 @@ async fn check_name_availability(
 async fn get_specific_name(
     state: web::Data<AppState>,
     path: web::Path<String>,
-) -> Result<HttpResponse, Error> {
+) -> Result<HttpResponse, KromerError> {
     let name = path.into_inner();
 
     let conn = &state.conn;
@@ -103,7 +104,7 @@ async fn get_specific_name(
             "ok": false,
             "error": "name_not_found"
         }))),
-        Err(_) => Err(error::ErrorInternalServerError("Internal Server Error")),
+        Err(e) => Err(KromerError::Database(e)),
     }
 }
 
@@ -113,7 +114,7 @@ async fn register_name(
     state: web::Data<AppState>,
     path: web::Path<String>,
     body: web::Json<RegisterNameRequest>,
-) -> Result<HttpResponse, Error> {
+) -> Result<HttpResponse, KromerError> {
     let name = path.into_inner();
 
     let conn = &state.conn;
@@ -124,9 +125,7 @@ async fn register_name(
 
     let name_available = NameController::is_name_available(conn, &name)
         .await
-        .map_err(|e| {
-            error::ErrorInternalServerError(format!("Failed to check name availability: {}", e))
-        })?;
+        .map_err(KromerError::Database)?;
 
     if !name_available {
         return Ok(HttpResponse::Ok().json(json!({
@@ -137,10 +136,8 @@ async fn register_name(
 
     let owner = AddressController::fetch_address(conn, owner_address, false)
         .await
-        .map_err(|e| {
-            error::ErrorInternalServerError(format!("Failed to fetch owner address: {}", e))
-        })?
-        .ok_or_else(|| error::ErrorNotFound("Owner address not found"))?;
+        .map_err(KromerError::Database)?
+        .ok_or_else(|| KromerError::Address(AddressError::NotFound(owner_address.to_string())))?;
 
     // TODO: Check if the user has enough balance to register the name
     // if owner.balance < state.name_cost {
@@ -150,10 +147,7 @@ async fn register_name(
     //     })));
     // }
 
-    let registration = NameRegistration {
-        name,
-        owner,
-    };
+    let registration = NameRegistration { name, owner };
 
     match NameController::register_name(conn, registration).await {
         Ok(_registered_name) => {
@@ -164,16 +158,13 @@ async fn register_name(
                 "ok": true,
             })))
         }
-        Err(e) => Err(error::ErrorInternalServerError(format!(
-            "Failed to register name: {}",
-            e
-        ))),
+        Err(e) => Err(KromerError::Database(e)),
     }
 }
 
 // https://krist.dev/docs/#api-NameGroup-GetNameCost
 #[get("/cost")]
-async fn get_cost_of_name(state: web::Data<AppState>) -> Result<HttpResponse, Error> {
+async fn get_cost_of_name(state: web::Data<AppState>) -> Result<HttpResponse, KromerError> {
     let name_cost = state.name_cost;
 
     Ok(HttpResponse::Ok().json(json!({
@@ -187,7 +178,7 @@ async fn get_cost_of_name(state: web::Data<AppState>) -> Result<HttpResponse, Er
 async fn get_newest_names(
     state: web::Data<AppState>,
     query: web::Query<LimitAndOffset>,
-) -> Result<HttpResponse, Error> {
+) -> Result<HttpResponse, KromerError> {
     let query = query.into_inner();
 
     let conn = &state.conn;
@@ -197,11 +188,11 @@ async fn get_newest_names(
 
     let names = NameController::get_newest_names(conn, limit, offset)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
 
     let total = NameController::name_count(conn)
         .await
-        .map_err(error::ErrorInternalServerError)?;
+        .map_err(KromerError::Database)?;
 
     let response: Vec<serde_json::Value> = names
         .into_iter()

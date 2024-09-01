@@ -1567,6 +1567,7 @@ dependencies = [
  "sea-orm",
  "serde",
  "serde_json",
+ "thiserror",
  "tracing",
  "tracing-subscriber",
 ]

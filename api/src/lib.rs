@@ -1,4 +1,5 @@
 mod routes;
+pub mod errors;
 
 use actix_web::{get, middleware, web, App, HttpRequest, HttpResponse, HttpServer, Result};
 use std::env;
