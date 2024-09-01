@@ -31,9 +31,12 @@ async fn list_names(
             json!({
                 "name": name.name,
                 "owner": name.owner,
+                "original_owner": name.original_owner,
                 "registered": name.registered,
                 "updated": name.updated,
+                "transferred": name.transferred,
                 "a": name.metadata,
+                "unpaid": name.unpaid,
             })
         })
         .collect();
@@ -54,9 +57,16 @@ async fn check_name_availability(
 ) -> Result<HttpResponse, Error> {
     let name = path.into_inner();
 
-    // TODO: Check if name exists, if so return that it is avaiable.
-    // TODO: Return error if name doesn't exist
-    todo!()
+    let conn = &state.conn;
+
+    let is_available = NameController::is_name_available(conn, &name)
+        .await
+        .map_err(error::ErrorInternalServerError)?;
+
+    Ok(HttpResponse::Ok().json(json!({
+        "ok": true,
+        "available": is_available,
+    })))
 }
 
 // https://krist.dev/docs/#api-NameGroup-GetName
