@@ -15,7 +15,7 @@ impl NameController {
     /// ```
     /// let total = NameController::count(&db).await?;
     /// ```
-    pub async fn count(conn: &DbConn) -> Result<u64, DbErr> {
+    pub async fn name_count(conn: &DbConn) -> Result<u64, DbErr> {
         Name::find().count(conn).await
     }
 

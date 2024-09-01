@@ -21,7 +21,7 @@ async fn list_names(
         .await
         .map_err(error::ErrorInternalServerError)?;
 
-    let total = NameController::count(conn)
+    let total = NameController::name_count(conn)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
