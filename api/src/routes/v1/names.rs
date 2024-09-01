@@ -50,7 +50,7 @@ async fn list_names(
 }
 
 // https://krist.dev/docs/#api-NameGroup-CheckName
-#[get("/{name}/check")]
+#[get("/check/{name}")]
 async fn check_name_availability(
     state: web::Data<AppState>,
     path: web::Path<String>,
