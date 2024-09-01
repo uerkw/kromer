@@ -9,6 +9,7 @@ use kromer_economy_service::sea_orm::{Database, DatabaseConnection};
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub conn: DatabaseConnection,
+    pub name_cost: u64,
 }
 
 #[get("/")]
@@ -37,7 +38,10 @@ pub async fn start() -> Result<(), std::io::Error> {
     let conn = Database::connect(&db_url).await.unwrap();
     Migrator::up(&conn, None).await.unwrap();
 
-    let state = AppState { conn };
+    let state = AppState {
+        conn,
+        name_cost: 500,
+    };
 
     HttpServer::new(move || {
         App::new()
@@ -61,6 +65,10 @@ pub async fn start() -> Result<(), std::io::Error> {
                         web::scope("/names")
                             .service(routes::v1::names::list_names)
                             .service(routes::v1::names::check_name_availability)
+                            .service(routes::v1::names::get_specific_name)
+                            .service(routes::v1::names::register_name)
+                            .service(routes::v1::names::get_newest_names)
+                            .service(routes::v1::names::get_cost_of_name),
                     )
                     .service(routes::v1::login) // This does not work?
                     .service(routes::v1::motd)

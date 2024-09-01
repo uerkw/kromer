@@ -1,6 +1,12 @@
-use kromer_economy_entity::{names, names::Entity as Name};
-
+use kromer_economy_entity::{names, names::Entity as Name, addresses, addresses::Entity as Address};
 use sea_orm::*;
+use sqlx::types::chrono;
+
+#[derive(Debug)]
+pub struct NameRegistration {
+    pub name: String,
+    pub owner: addresses::Model,
+}
 
 /// A helper struct that houses methods related to names
 pub struct NameController;
@@ -121,5 +127,35 @@ impl NameController {
             .offset(offset)
             .all(conn)
             .await
+    }
+
+    /// Creates a new name
+    ///
+    /// # Arguments
+    /// * `conn` - The database connection
+    /// * `registration` - The NameRegistration struct containing name and owner details
+    ///
+    /// # Examples
+    /// ```
+    /// let owner = AddressController::fetch_address(&db, "address").await?.unwrap();
+    /// let registration = NameRegistration {
+    ///     name: "example".to_string(),
+    ///     owner,
+    /// };
+    /// let new_name = NameController::register_name(&db, registration).await?;
+    /// ```
+    pub async fn register_name(
+        conn: &DbConn,
+        registration: NameRegistration,
+    ) -> Result<names::Model, DbErr> {
+        let new_name = names::ActiveModel {
+            name: Set(registration.name),
+            owner: Set(registration.owner.address.clone()),
+            original_owner: Set(Some(registration.owner.address)),
+            registered: Set(chrono::Utc::now().fixed_offset()),
+            ..Default::default()
+        };
+
+        new_name.insert(conn).await
     }
 }
