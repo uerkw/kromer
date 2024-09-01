@@ -232,4 +232,5 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
     cfg.service(register_name);
     cfg.service(get_cost_of_name);
     cfg.service(get_newest_names);
+    cfg.service(check_name_availability);
 }
