@@ -1,4 +1,4 @@
-use actix_web::{get, web, Error, HttpResponse, Result};
+use actix_web::{get, web, HttpResponse, Result};
 
 use kromer_economy_entity::addresses;
 use kromer_economy_service::controller::{
@@ -144,7 +144,7 @@ async fn get_address_transactions(
         .map_err(KromerError::Database)?;
 
     if addr.is_none() {
-        return Err(KromerError::Address(AddressError::NotFound(address)).into());
+        return Err(KromerError::Address(AddressError::NotFound(address)));
     }
 
     // Im not particularly sure about the function name here
@@ -200,7 +200,7 @@ async fn get_address_names(
         .map_err(KromerError::Database)?;
 
     if addr.is_none() {
-        return Err(KromerError::Address(AddressError::NotFound(address)).into());
+        return Err(KromerError::Address(AddressError::NotFound(address)));
     }
 
     let names_count = NameController::names_owned_by_address(conn, &address)

@@ -1,7 +1,7 @@
-mod routes;
 pub mod errors;
+mod routes;
 
-use actix_web::{get, middleware, web, App, HttpRequest, HttpResponse, HttpServer, Result};
+use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Result};
 use errors::KromerError;
 use std::env;
 

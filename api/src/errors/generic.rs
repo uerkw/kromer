@@ -1,5 +1,5 @@
-use thiserror::Error;
 use actix_web::{error, HttpResponse};
+use thiserror::Error;
 
 use super::{ErrorResponse, KromerErrorHelper};
 

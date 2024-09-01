@@ -1,5 +1,5 @@
-use thiserror::Error;
 use actix_web::{error, http::StatusCode, HttpResponse};
+use thiserror::Error;
 
 use super::{ErrorResponse, KromerErrorHelper};
 
@@ -9,7 +9,7 @@ pub enum AddressError {
     NotFound(String),
 
     #[error("Authentication failed")]
-    AuthFailed
+    AuthFailed,
 }
 
 impl error::ResponseError for AddressError {

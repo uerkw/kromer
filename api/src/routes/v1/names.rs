@@ -1,8 +1,8 @@
-use actix_web::{error, get, post, web, Error, HttpResponse};
+use actix_web::{get, post, web, HttpResponse};
 use kromer_economy_service::controller::{AddressController, NameController, NameRegistration};
 use serde_json::json;
 
-use crate::errors::{AddressError, KromerError, NameError};
+use crate::errors::{AddressError, KromerError};
 use crate::{routes::LimitAndOffset, AppState};
 
 #[derive(serde::Deserialize)]

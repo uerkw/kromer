@@ -1,16 +1,16 @@
 use actix_web::{error, http::StatusCode, HttpResponse};
 
 mod address;
-mod name;
-mod transaction;
 mod generic;
+mod name;
 mod routes;
+mod transaction;
 
 pub use address::*;
-pub use name::*;
-pub use transaction::*;
 pub use generic::*;
+pub use name::*;
 pub use routes::*;
+pub use transaction::*;
 
 #[derive(Debug, thiserror::Error)]
 pub enum KromerError {
@@ -38,7 +38,7 @@ pub struct ErrorResponse<'a> {
     pub ok: bool,
     pub error: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub message: Option<String>
+    pub message: Option<String>,
 }
 
 // NOTE(sov): This might not be needed? We are using an enum for errors, we might be able to just somehow turn that into a camelCase string
@@ -74,8 +74,7 @@ impl error::ResponseError for KromerError {
                 };
 
                 HttpResponse::build(self.status_code()).json(error)
-            },
-
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-use kromer_economy_entity::{names, names::Entity as Name, addresses};
+use kromer_economy_entity::{addresses, names, names::Entity as Name};
 use sea_orm::*;
 use sqlx::types::chrono;
 

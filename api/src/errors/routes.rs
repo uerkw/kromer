@@ -9,14 +9,14 @@ pub enum RoutesError {
     NotFound,
 
     #[error("Rate limit hit")]
-    RateLimitHit
+    RateLimitHit,
 }
 
 impl error::ResponseError for RoutesError {
     fn status_code(&self) -> StatusCode {
         match self {
             RoutesError::NotFound => StatusCode::NOT_FOUND,
-            RoutesError::RateLimitHit => StatusCode::TOO_MANY_REQUESTS
+            RoutesError::RateLimitHit => StatusCode::TOO_MANY_REQUESTS,
         }
     }
 
@@ -34,7 +34,7 @@ impl KromerErrorHelper for RoutesError {
     fn error_type(&self) -> &str {
         match self {
             RoutesError::NotFound => "route_not_found",
-            RoutesError::RateLimitHit => "rate_limit_hit"
+            RoutesError::RateLimitHit => "rate_limit_hit",
         }
     }
 }
