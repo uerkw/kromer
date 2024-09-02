@@ -2,7 +2,7 @@ use actix_web::{get, post, web, HttpResponse};
 use kromer_economy_service::controller::{AddressController, NameController, NameRegistration};
 use serde_json::json;
 
-use crate::errors::{AddressError, KromerError};
+use crate::errors::{AddressError, KromerError, NameError};
 use crate::{routes::LimitAndOffset, AppState};
 
 use crate::responses::v1::names::{Name, NameResponse};
@@ -102,10 +102,7 @@ async fn get_specific_name(
                 "unpaid": name.unpaid,
             }
         }))),
-        Ok(None) => Ok(HttpResponse::Ok().json(json!({
-            "ok": false,
-            "error": "name_not_found"
-        }))),
+        Ok(None) => Err(KromerError::Name(NameError::NameNotFound(name))),
         Err(e) => Err(KromerError::Database(e)),
     }
 }
@@ -130,10 +127,7 @@ async fn register_name(
         .map_err(KromerError::Database)?;
 
     if !name_available {
-        return Ok(HttpResponse::Ok().json(json!({
-            "ok": false,
-            "error": "name_taken"
-        })));
+        return Err(KromerError::Name(NameError::NameTaken(name)));
     }
 
     let owner = AddressController::fetch_address(conn, owner_address, false)
