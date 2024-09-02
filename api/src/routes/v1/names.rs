@@ -5,6 +5,8 @@ use serde_json::json;
 use crate::errors::{AddressError, KromerError};
 use crate::{routes::LimitAndOffset, AppState};
 
+use crate::responses::v1::names::{Name, NameResponse};
+
 #[derive(serde::Deserialize)]
 struct RegisterNameRequest {
     #[serde(rename = "privatekey")]

@@ -9,6 +9,10 @@ use serde_json::json;
 use crate::errors::{AddressError, KromerError};
 use crate::{routes::LimitAndOffset, AppState};
 
+use crate::responses::v1::addresses::{Address, AddressResponse};
+use crate::responses::v1::names::{Name, NameResponse};
+use crate::responses::v1::transactions::{Transaction, TransactionResponse};
+
 #[derive(Debug, serde::Deserialize)]
 struct ShouldFetchNames {
     should_fetch_names: Option<bool>,
@@ -32,25 +36,25 @@ async fn list_addresses(
         .await
         .map_err(KromerError::Database)?;
 
-    let response: Vec<serde_json::Value> = addresses
+    let addrs: Vec<Address> = addresses
         .iter()
-        .map(|model| {
-            json!({
-                "address": model.address,
-                "balance": model.balance,
-                "totalin": model.total_in,
-                "totalout": model.total_out,
-                "firstseen": model.first_seen,
-            })
+        .map(|model| Address {
+            address: model.address.clone(), // NOTE(sov): I really do not want to clone here, should be refactored.
+            balance: model.balance,
+            total_in: model.total_in,
+            total_out: model.total_out,
+            first_seen: model.first_seen,
         })
         .collect();
 
-    Ok(HttpResponse::Ok().json(json!({
-        "ok": true,
-        "count": response.len(),
-        "total": total,
-        "addresses": response,
-    })))
+    let response = AddressResponse {
+        ok: true,
+        total,
+        count: addresses.len() as u64,
+        addresses: addrs,
+    };
+
+    Ok(HttpResponse::Ok().json(response))
 }
 
 #[get("/{address}")]
@@ -71,21 +75,22 @@ async fn get_specific_address(
 
     // Kinda cursed but it works
     match addr {
-        Some(addr) => Ok(HttpResponse::Ok().json(json!({
-            "ok": true,
-            "address": {
-                "address": addr.address,
-                "balance": addr.balance,
-                "totalin": addr.total_in,
-                "totalout": addr.total_out,
-                "firstseen": addr.first_seen,
-            }
-        }))),
-        None => Ok(HttpResponse::Ok().json(json!({
-                "ok": false,
-                "error": "address_not_found"
-            }
-        ))),
+        Some(addr) => {
+            let address = Address {
+                address,
+                balance: addr.balance,
+                total_in: addr.total_in,
+                total_out: addr.total_out,
+                first_seen: addr.first_seen,
+            };
+
+            // TODO: Make the `count` and `total` fields optional and skip them if they're `None`
+            Ok(HttpResponse::Ok().json(json!({
+                "ok": true,
+                "address": address
+            })))
+        }
+        None => Err(KromerError::Address(AddressError::NotFound(address))),
     }
 }
 
@@ -108,25 +113,25 @@ async fn get_richest_addresses(
         .await
         .map_err(KromerError::Database)?;
 
-    let response: Vec<serde_json::Value> = richest_addresses
+    let addresses: Vec<Address> = richest_addresses
         .into_iter()
-        .map(|addr| {
-            json!({
-                "address": addr.address,
-                "balance": addr.balance,
-                "totalin": addr.total_in,
-                "totalout": addr.total_out,
-                "firstseen": addr.first_seen,
-            })
+        .map(|addr| Address {
+            address: addr.address,
+            balance: addr.balance,
+            total_in: addr.total_in,
+            total_out: addr.total_out,
+            first_seen: addr.first_seen,
         })
         .collect();
 
-    Ok(HttpResponse::Ok().json(json!({
-        "ok": true,
-        "count": response.len(),
-        "total": total,
-        "addresses": response,
-    })))
+    let response = AddressResponse {
+        ok: true,
+        total,
+        count: addresses.len() as u64,
+        addresses,
+    };
+
+    Ok(HttpResponse::Ok().json(response))
 }
 
 // This is missing the `excludeMined` query paramater, we don't have mining.
@@ -156,29 +161,29 @@ async fn get_address_transactions(
         .map_err(KromerError::Database)?;
 
     // TODO: This is missing the field `type`, type can be `transfer`, `name_purchase`, `name_a_record`, or `name_transfer`.
-    let response: Vec<serde_json::Value> = transactions
+    let response: Vec<Transaction> = transactions
         .into_iter()
-        .map(|tx| {
-            json!({
-                "id": tx.id,
-                "from": tx.from,
-                "to": tx.to,
-                "value": tx.value,
-                "time": tx.time,
-                "name": tx.name,
-                "sent_metaname": tx.sent_metaname,
-                "sent_name": tx.sent_name,
-                "metadata": tx.metadata,
-            })
+        .map(|tx| Transaction {
+            id: tx.id,
+            from: tx.from,
+            to: tx.to,
+            value: tx.value,
+            time: tx.time,
+            name: tx.name,
+            sent_metaname: tx.sent_metaname,
+            sent_name: tx.sent_name,
+            metadata: tx.metadata,
         })
         .collect();
 
-    Ok(HttpResponse::Ok().json(json!({
-        "ok": true,
-        "count": response.len(),
-        "total": transaction_count,
-        "transactions": response,
-    })))
+    let response = TransactionResponse {
+        ok: true,
+        total: transaction_count,
+        count: response.len() as u64,
+        transactions: response,
+    };
+
+    Ok(HttpResponse::Ok().json(response))
 }
 
 #[get("/{address}/names")]
@@ -211,16 +216,14 @@ async fn get_address_names(
         .await
         .map_err(KromerError::Database)?;
 
-    let response: Vec<serde_json::Value> = names
+    let response: Vec<Name> = names
         .into_iter()
-        .map(|name| {
-            json!({
-                "name": name.name,
-                "owner": name.owner,
-                "registered": name.registered,
-                "updated": name.updated,
-                "a": name.metadata, // This might need to be changed at some point
-            })
+        .map(|name| Name {
+            name: name.name,
+            owner: name.owner,
+            registered: name.registered,
+            updated: name.updated,
+            metadata: name.metadata,
         })
         .collect();
 
