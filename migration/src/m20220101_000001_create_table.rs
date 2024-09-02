@@ -1,3 +1,4 @@
+use sea_orm::ColumnTrait;
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveMigrationName)]
@@ -236,8 +237,8 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Names::Owner).char_len(10).not_null())
                     .col(ColumnDef::new(Names::OriginalOwner).char_len(10).null())
                     .col(timestamp(Names::Registered).timestamp_with_time_zone())
-                    .col(ColumnDef::new(Names::Updated).date().null())
-                    .col(ColumnDef::new(Names::Transferred).date().null())
+                    .col(ColumnDef::new(Names::Updated).timestamp_with_time_zone().null())
+                    .col(ColumnDef::new(Names::Transferred).timestamp_with_time_zone().null())
                     .col(ColumnDef::new(Names::Metadata).string_len(255).null())
                     .col(float(Names::Unpaid))
                     .to_owned(),
