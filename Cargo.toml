@@ -31,6 +31,7 @@ tracing-subscriber = "0.3.18"
 serde = { version = "1.0.209", features = ["derive"] }
 serde_json = "1.0.127"
 thiserror = "1.0.63"
+argon2 = "0.5.3"
 
 [dependencies]
 kromer-economy-api = { path = "api" }

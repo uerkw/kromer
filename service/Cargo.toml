@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 sea-orm.workspace = true
 kromer-economy-entity = { path = "../entity" }
+argon2.workspace = true

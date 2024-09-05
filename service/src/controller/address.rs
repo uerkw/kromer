@@ -151,4 +151,26 @@ impl AddressController {
             .all(conn)
             .await
     }
+
+    /// Fetches the address from the database when given a private key
+    ///
+    /// # Arguments
+    /// * `conn` - The database connection
+    /// * `private_key` - The private key to fetch the address for
+    ///
+    /// # Examples
+    /// ```
+    /// let address = AddressController::get_from_private_key(&db, "pasetorules!").await?;
+    /// ```
+    pub async fn get_from_private_key(
+        conn: &DbConn,
+        private_key: &str,
+    ) -> Result<Option<addresses::Model>, DbErr> {
+        // Address::find()
+        //     .filter(addresses::Column::PrivateKey.eq(private_key))
+        //     .one(conn)
+        //     .await
+
+        todo!()
+    }
 }

@@ -126,8 +126,11 @@ async fn register_name(
     let conn = &state.conn;
 
     // TODO: Implement proper authentication and address get from private key
-    let _private_key = &body.private_key;
-    let owner_address = "TODO_GET_ADDRESS_FROM_PRIVATE_KEY"; // TODO: Get address from private key, should return address model.
+    let private_key = &body.private_key;
+    let owner = AddressController::get_from_private_key(conn, private_key)
+        .await
+        .map_err(KromerError::Database)?
+        .ok_or_else(|| KromerError::Address(AddressError::AuthFailed))?;
 
     let name_available = NameController::is_name_available(conn, &name)
         .await
@@ -137,15 +140,9 @@ async fn register_name(
         return Err(KromerError::Name(NameError::NameTaken(name)));
     }
 
-    let owner = AddressController::fetch_address(conn, owner_address, false)
-        .await
-        .map_err(KromerError::Database)?
-        .ok_or_else(|| KromerError::Address(AddressError::NotFound(owner_address.to_string())))?;
-
-    // TODO: Check if the user has enough balance to register the name
-    // if owner.balance < state.name_cost {
-    //     return Err(KromerError::Name(NameError::InsufficientFunds));
-    // }
+    if owner.balance < state.name_cost {
+        return Err(KromerError::Name(NameError::InsufficientBalance));
+    }
 
     let registration = NameRegistration { name, owner };
 
