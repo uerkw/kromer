@@ -7,3 +7,4 @@ edition = "2021"
 sea-orm.workspace = true
 kromer-economy-entity = { path = "../entity" }
 argon2.workspace = true
+rand.workspace = true
