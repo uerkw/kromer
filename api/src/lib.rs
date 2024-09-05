@@ -12,7 +12,7 @@ use kromer_economy_service::sea_orm::{Database, DatabaseConnection};
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub conn: DatabaseConnection,
-    pub name_cost: u64,
+    pub name_cost: f32,
 }
 
 #[get("/")]
@@ -42,7 +42,7 @@ pub async fn start() -> Result<(), std::io::Error> {
 
     let state = AppState {
         conn,
-        name_cost: 500,
+        name_cost: 500.0,
     };
 
     HttpServer::new(move || {
