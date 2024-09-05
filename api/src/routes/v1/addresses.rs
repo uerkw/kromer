@@ -10,8 +10,8 @@ use crate::errors::{AddressError, KromerError};
 use crate::{routes::LimitAndOffset, AppState};
 
 use crate::responses::v1::addresses::{Address, AddressResponse};
-use crate::responses::v1::names::{Name, NameResponse};
-use crate::responses::v1::transactions::{Transaction, TransactionResponse};
+use crate::responses::v1::names::Name;
+use crate::responses::v1::transactions::{Transaction, TransactionResponse, TransactionType};
 
 #[derive(Debug, serde::Deserialize)]
 struct ShouldFetchNames {
@@ -160,10 +160,10 @@ async fn get_address_transactions(
         .await
         .map_err(KromerError::Database)?;
 
-    // TODO: This is missing the field `type`, type can be `transfer`, `name_purchase`, `name_a_record`, or `name_transfer`.
     let response: Vec<Transaction> = transactions
         .into_iter()
         .map(|tx| Transaction {
+            r#type: TransactionType::indentify(&tx), // DO NOT MOVE THIS DOWN OR RUST WILL START CRYING
             id: tx.id,
             from: tx.from,
             to: tx.to,
