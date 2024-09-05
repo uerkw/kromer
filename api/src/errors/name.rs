@@ -13,6 +13,9 @@ pub enum NameError {
 
     #[error("You are not the owner of name {0}")]
     NotNameOwner(String),
+
+    #[error("Insufficient balance to purchase name")]
+    InsufficientBalance,
 }
 
 impl error::ResponseError for NameError {
@@ -21,6 +24,7 @@ impl error::ResponseError for NameError {
             NameError::NameNotFound(_) => StatusCode::NOT_FOUND,
             NameError::NameTaken(_) => StatusCode::CONFLICT,
             NameError::NotNameOwner(_) => StatusCode::FORBIDDEN,
+            NameError::InsufficientBalance => StatusCode::IM_A_TEAPOT, // Really dont know what to put here instead of 418.
         }
     }
 
@@ -40,6 +44,7 @@ impl KromerErrorHelper for NameError {
             NameError::NameNotFound(_) => "name_not_found",
             NameError::NameTaken(_) => "name_taken",
             NameError::NotNameOwner(_) => "not_name_owner",
+            NameError::InsufficientBalance => "insufficient_balance",
         }
     }
 }
