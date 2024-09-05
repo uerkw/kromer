@@ -108,9 +108,9 @@ async fn get_specific_name(
                 name: sname,
             };
 
-            return Ok(HttpResponse::Ok().json(response));
+            Ok(HttpResponse::Ok().json(response))
         },
-        None => return Err(KromerError::Name(NameError::NameNotFound(path_name))),
+        None => Err(KromerError::Name(NameError::NameNotFound(path_name))),
     }
 }
 

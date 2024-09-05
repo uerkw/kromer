@@ -55,6 +55,6 @@ impl TransactionType {
             return TransactionType::NameTransfer;
         }
 
-        return TransactionType::Transfer;
+        TransactionType::Transfer
     }
 }
