@@ -13,6 +13,7 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
         web::scope("/api/v1")
             .configure(v1::routes)
             .service(web::scope("/addresses").configure(v1::addresses::routes))
-            .service(web::scope("/names").configure(v1::names::routes)),
+            .service(web::scope("/names").configure(v1::names::routes))
+            .service(web::scope("/transactions").configure(v1::transactions::routes)),
     );
 }
