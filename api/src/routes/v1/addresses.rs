@@ -4,14 +4,13 @@ use kromer_economy_entity::addresses;
 use kromer_economy_service::controller::{
     AddressController, NameController, TransactionController,
 };
-use serde_json::json;
 
 use crate::errors::{AddressError, KromerError};
 use crate::{routes::LimitAndOffset, AppState};
 
-use crate::responses::v1::addresses::{Address, AddressResponse};
-use crate::responses::v1::names::Name;
-use crate::responses::v1::transactions::{Transaction, TransactionResponse, TransactionType};
+use crate::responses::v1::addresses::{Address, AddressResponse, SingularAddressResponse};
+use crate::responses::v1::names::{Name, NameResponse};
+use crate::responses::v1::transactions::{Transaction, TransactionResponse};
 
 #[derive(Debug, serde::Deserialize)]
 struct ShouldFetchNames {
@@ -38,13 +37,7 @@ async fn list_addresses(
 
     let addrs: Vec<Address> = addresses
         .iter()
-        .map(|model| Address {
-            address: model.address.clone(), // NOTE(sov): I really do not want to clone here, should be refactored.
-            balance: model.balance,
-            total_in: model.total_in,
-            total_out: model.total_out,
-            first_seen: model.first_seen,
-        })
+        .map(Into::into) // NOTE(sov): This internally clones, cant fix it
         .collect();
 
     let response = AddressResponse {
@@ -76,19 +69,12 @@ async fn get_specific_address(
     // Kinda cursed but it works
     match addr {
         Some(addr) => {
-            let address = Address {
-                address,
-                balance: addr.balance,
-                total_in: addr.total_in,
-                total_out: addr.total_out,
-                first_seen: addr.first_seen,
-            };
+            let address = addr.into();
 
-            // TODO: Make the `count` and `total` fields optional and skip them if they're `None`
-            Ok(HttpResponse::Ok().json(json!({
-                "ok": true,
-                "address": address
-            })))
+            Ok(HttpResponse::Ok().json(SingularAddressResponse {
+                ok: true,
+                address,
+            }))
         }
         None => Err(KromerError::Address(AddressError::NotFound(address))),
     }
@@ -115,13 +101,7 @@ async fn get_richest_addresses(
 
     let addresses: Vec<Address> = richest_addresses
         .into_iter()
-        .map(|addr| Address {
-            address: addr.address,
-            balance: addr.balance,
-            total_in: addr.total_in,
-            total_out: addr.total_out,
-            first_seen: addr.first_seen,
-        })
+        .map(Into::into)
         .collect();
 
     let response = AddressResponse {
@@ -162,18 +142,7 @@ async fn get_address_transactions(
 
     let response: Vec<Transaction> = transactions
         .into_iter()
-        .map(|tx| Transaction {
-            r#type: TransactionType::indentify(&tx), // DO NOT MOVE THIS DOWN OR RUST WILL START CRYING
-            id: tx.id,
-            from: tx.from,
-            to: tx.to,
-            value: tx.value,
-            time: tx.time,
-            name: tx.name,
-            sent_metaname: tx.sent_metaname,
-            sent_name: tx.sent_name,
-            metadata: tx.metadata,
-        })
+        .map(Into::into)
         .collect();
 
     let response = TransactionResponse {
@@ -218,21 +187,17 @@ async fn get_address_names(
 
     let response: Vec<Name> = names
         .into_iter()
-        .map(|name| Name {
-            name: name.name,
-            owner: name.owner,
-            registered: name.registered,
-            updated: name.updated,
-            metadata: name.metadata,
-        })
+        .map(Into::into)
         .collect();
 
-    Ok(HttpResponse::Ok().json(json!({
-        "ok": true,
-        "count": response.len(),
-        "total": names_count,
-        "names": response,
-    })))
+    let response = NameResponse {
+        ok: true,
+        total: names_count,
+        count: response.len() as u64,
+        names: response,
+    };
+
+    Ok(HttpResponse::Ok().json(response))
 }
 
 pub fn routes(cfg: &mut web::ServiceConfig) {

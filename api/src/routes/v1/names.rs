@@ -36,15 +36,7 @@ async fn list_names(
 
     let response: Vec<Name> = names
         .into_iter()
-        .map(|name| {
-            Name {
-                name: name.name,
-                owner: name.owner,
-                registered: name.registered,
-                updated: name.updated,
-                metadata: name.metadata,
-            }
-        })
+        .map(Into::into)
         .collect();
 
     let response = NameResponse {
@@ -95,17 +87,11 @@ async fn get_specific_name(
 
     match name {
         Some(name) => {
-            let sname = Name {
-                name: name.name,
-                owner: name.owner,
-                registered: name.registered,
-                updated: name.updated,
-                metadata: name.metadata,
-            };
+            let name = name.into();
 
             let response = SingularNameResponse {
                 ok: true,
-                name: sname,
+                name,
             };
 
             Ok(HttpResponse::Ok().json(response))
@@ -193,15 +179,7 @@ async fn get_newest_names(
 
     let response: Vec<Name> = names
         .into_iter()
-        .map(|name| {
-            Name {
-                name: name.name,
-                owner: name.owner,
-                registered: name.registered,
-                updated: name.updated,
-                metadata: name.metadata,
-            }
-        })
+        .map(Into::into)
         .collect();
 
     let response = NameResponse {

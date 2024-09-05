@@ -1,3 +1,4 @@
+use kromer_economy_entity::addresses;
 use sea_orm::sqlx::types::chrono::{DateTime, FixedOffset};
 use serde::{Serialize, Deserialize};
 
@@ -10,6 +11,12 @@ pub struct AddressResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct SingularAddressResponse {
+    pub ok: bool,
+    pub address: Address,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Address {
     pub address: String,
     pub balance: f32,
@@ -19,4 +26,28 @@ pub struct Address {
     pub total_out: f32,
     #[serde(rename = "firstseen")]
     pub first_seen: DateTime<FixedOffset>,
+}
+
+impl From<addresses::Model> for Address {
+    fn from(address: addresses::Model) -> Self {
+        Address {
+            address: address.address,
+            balance: address.balance,
+            total_in: address.total_in,
+            total_out: address.total_out,
+            first_seen: address.first_seen,
+        }
+    }
+}
+
+impl From<&addresses::Model> for Address {
+    fn from(value: &addresses::Model) -> Self {
+        Address {
+            address: value.address.clone(),
+            balance: value.balance,
+            total_in: value.total_in,
+            total_out: value.total_out,
+            first_seen: value.first_seen,
+        }
+    }
 }
