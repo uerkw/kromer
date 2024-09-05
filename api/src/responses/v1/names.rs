@@ -10,6 +10,26 @@ pub struct NameResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct SingularNameResponse {
+    pub ok: bool,
+    pub name: Name,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NameAvailabilityResponse {
+    pub ok: bool,
+    pub available: bool,
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NameCostResponse {
+    pub ok: bool,
+    #[serde(rename = "name_cost")]
+    pub cost: f32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Name {
     pub name: String,
     pub owner: String,

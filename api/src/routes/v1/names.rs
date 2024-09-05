@@ -1,11 +1,11 @@
 use actix_web::{get, post, web, HttpResponse};
 use kromer_economy_service::controller::{AddressController, NameController, NameRegistration};
-use serde_json::json;
 
 use crate::errors::{AddressError, KromerError, NameError};
+use crate::responses::v1::generic::OkResponse;
 use crate::{routes::LimitAndOffset, AppState};
 
-use crate::responses::v1::names::{Name, NameResponse};
+use crate::responses::v1::names::{Name, NameAvailabilityResponse, NameCostResponse, NameResponse, SingularNameResponse};
 
 #[derive(serde::Deserialize)]
 struct RegisterNameRequest {
@@ -34,28 +34,27 @@ async fn list_names(
         .await
         .map_err(KromerError::Database)?;
 
-    let response: Vec<serde_json::Value> = names
+    let response: Vec<Name> = names
         .into_iter()
         .map(|name| {
-            json!({
-                "name": name.name,
-                "owner": name.owner,
-                "original_owner": name.original_owner,
-                "registered": name.registered,
-                "updated": name.updated,
-                "transferred": name.transferred,
-                "a": name.metadata,
-                "unpaid": name.unpaid,
-            })
+            Name {
+                name: name.name,
+                owner: name.owner,
+                registered: name.registered,
+                updated: name.updated,
+                metadata: name.metadata,
+            }
         })
         .collect();
 
-    Ok(HttpResponse::Ok().json(json!({
-        "ok": true,
-        "count": response.len(),
-        "total": total,
-        "names": response,
-    })))
+    let response = NameResponse {
+        ok: true,
+        total,
+        count: response.len() as u64,
+        names: response,
+    };
+
+    Ok(HttpResponse::Ok().json(response))
 }
 
 // https://krist.dev/docs/#api-NameGroup-CheckName
@@ -72,10 +71,12 @@ async fn check_name_availability(
         .await
         .map_err(KromerError::Database)?;
 
-    Ok(HttpResponse::Ok().json(json!({
-        "ok": true,
-        "available": is_available,
-    })))
+    let response = NameAvailabilityResponse {
+        ok: true,
+        available: is_available,
+    };
+
+    Ok(HttpResponse::Ok().json(response))
 }
 
 // https://krist.dev/docs/#api-NameGroup-GetName
@@ -84,26 +85,32 @@ async fn get_specific_name(
     state: web::Data<AppState>,
     path: web::Path<String>,
 ) -> Result<HttpResponse, KromerError> {
-    let name = path.into_inner();
+    let path_name = path.into_inner();
 
     let conn = &state.conn;
 
-    match NameController::get_name(conn, &name).await {
-        Ok(Some(name)) => Ok(HttpResponse::Ok().json(json!({
-            "ok": true,
-            "name": {
-                "name": name.name,
-                "owner": name.owner,
-                "original_owner": name.original_owner,
-                "registered": name.registered,
-                "updated": name.updated,
-                "transferred": name.transferred,
-                "a": name.metadata,
-                "unpaid": name.unpaid,
-            }
-        }))),
-        Ok(None) => Err(KromerError::Name(NameError::NameNotFound(name))),
-        Err(e) => Err(KromerError::Database(e)),
+    let name = NameController::get_name(conn, &path_name)
+        .await
+        .map_err(KromerError::Database)?;
+
+    match name {
+        Some(name) => {
+            let sname = Name {
+                name: name.name,
+                owner: name.owner,
+                registered: name.registered,
+                updated: name.updated,
+                metadata: name.metadata,
+            };
+
+            let response = SingularNameResponse {
+                ok: true,
+                name: sname,
+            };
+
+            return Ok(HttpResponse::Ok().json(response));
+        },
+        None => return Err(KromerError::Name(NameError::NameNotFound(path_name))),
     }
 }
 
@@ -137,10 +144,7 @@ async fn register_name(
 
     // TODO: Check if the user has enough balance to register the name
     // if owner.balance < state.name_cost {
-    //     return Ok(HttpResponse::Ok().json(json!({
-    //         "ok": false,
-    //         "error": "insufficient_balance"
-    //     })));
+    //     return Err(KromerError::Name(NameError::InsufficientFunds));
     // }
 
     let registration = NameRegistration { name, owner };
@@ -150,9 +154,9 @@ async fn register_name(
             // TODO: Deduct the name cost from the user's balance
             // AddressController::deduct_balance(conn, owner_address, state.name_cost).await?;
 
-            Ok(HttpResponse::Ok().json(json!({
-                "ok": true,
-            })))
+            Ok(HttpResponse::Ok().json(OkResponse {
+                ok: true
+            }))
         }
         Err(e) => Err(KromerError::Database(e)),
     }
@@ -163,10 +167,10 @@ async fn register_name(
 async fn get_cost_of_name(state: web::Data<AppState>) -> Result<HttpResponse, KromerError> {
     let name_cost = state.name_cost;
 
-    Ok(HttpResponse::Ok().json(json!({
-        "ok": true,
-        "name_cost": name_cost,
-    })))
+    Ok(HttpResponse::Ok().json(NameCostResponse {
+        ok: true,
+        cost: name_cost,
+    }))
 }
 
 // https://krist.dev/docs/#api-NameGroup-GetNewNames
@@ -190,28 +194,27 @@ async fn get_newest_names(
         .await
         .map_err(KromerError::Database)?;
 
-    let response: Vec<serde_json::Value> = names
+    let response: Vec<Name> = names
         .into_iter()
         .map(|name| {
-            json!({
-                "name": name.name,
-                "owner": name.owner,
-                "original_owner": name.original_owner,
-                "registered": name.registered,
-                "updated": name.updated,
-                "transferred": name.transferred,
-                "a": name.metadata,
-                "unpaid": name.unpaid,
-            })
+            Name {
+                name: name.name,
+                owner: name.owner,
+                registered: name.registered,
+                updated: name.updated,
+                metadata: name.metadata,
+            }
         })
         .collect();
 
-    Ok(HttpResponse::Ok().json(json!({
-        "ok": true,
-        "count": response.len(),
-        "total": total,
-        "names": response,
-    })))
+    let response = NameResponse {
+        ok: true,
+        total,
+        count: response.len() as u64,
+        names: response,
+    };
+
+    Ok(HttpResponse::Ok().json(response))
 }
 
 pub fn routes(cfg: &mut web::ServiceConfig) {
