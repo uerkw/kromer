@@ -1,6 +1,6 @@
 use kromer_economy_entity::names;
 use sea_orm::prelude::DateTimeWithTimeZone;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NameResponse {
@@ -21,7 +21,6 @@ pub struct NameAvailabilityResponse {
     pub ok: bool,
     pub available: bool,
 }
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NameCostResponse {

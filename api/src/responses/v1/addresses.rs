@@ -1,6 +1,6 @@
 use kromer_economy_entity::addresses;
 use sea_orm::sqlx::types::chrono::{DateTime, FixedOffset};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AddressResponse {

@@ -55,7 +55,11 @@ impl TransactionController {
     /// ```
     /// let transactions = TransactionController::latest(&db).await?;
     /// ```
-    pub async fn latest(conn: &DbConn, limit: u64, offset: u64) -> Result<Vec<transactions::Model>, DbErr> {
+    pub async fn latest(
+        conn: &DbConn,
+        limit: u64,
+        offset: u64,
+    ) -> Result<Vec<transactions::Model>, DbErr> {
         Transaction::find()
             .order_by_asc(transactions::Column::Time)
             .limit(limit)

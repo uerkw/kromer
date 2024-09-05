@@ -1,6 +1,6 @@
 use kromer_economy_entity::transactions;
 use sea_orm::prelude::DateTimeWithTimeZone;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TransactionResponse {
@@ -41,20 +41,22 @@ pub enum TransactionType {
     #[serde(rename = "name_transfer")]
     NameTransfer,
     #[serde(rename = "mined")]
-    Mined // In kromer it's not really mining, more like giving free money.
+    Mined, // In kromer it's not really mining, more like giving free money.
 }
 
 impl TransactionType {
     pub fn indentify(transaction: &transactions::Model) -> TransactionType {
         // THIS IS HORRIBLE AND I HATE IT.
-        if transaction.from.is_none() { return TransactionType::Mined; }
+        if transaction.from.is_none() {
+            return TransactionType::Mined;
+        }
 
         if transaction.name.is_some() {
             if let Some(to) = &transaction.to {
                 match to.as_str() {
                     "name" => return TransactionType::NamePurchase,
                     "metadata" => return TransactionType::NameMetadataUpdated,
-                    _ => return TransactionType::NameTransfer
+                    _ => return TransactionType::NameTransfer,
                 }
             }
 
@@ -64,7 +66,6 @@ impl TransactionType {
         TransactionType::Transfer
     }
 }
-
 
 impl From<transactions::Model> for Transaction {
     fn from(transaction: transactions::Model) -> Self {

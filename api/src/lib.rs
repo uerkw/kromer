@@ -1,6 +1,6 @@
 pub mod errors;
-mod routes;
 pub mod responses;
+mod routes;
 
 use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Result};
 use errors::KromerError;

@@ -5,7 +5,9 @@ use crate::errors::{AddressError, KromerError, NameError};
 use crate::responses::v1::generic::OkResponse;
 use crate::{routes::LimitAndOffset, AppState};
 
-use crate::responses::v1::names::{Name, NameAvailabilityResponse, NameCostResponse, NameResponse, SingularNameResponse};
+use crate::responses::v1::names::{
+    Name, NameAvailabilityResponse, NameCostResponse, NameResponse, SingularNameResponse,
+};
 
 #[derive(serde::Deserialize)]
 struct RegisterNameRequest {
@@ -34,10 +36,7 @@ async fn list_names(
         .await
         .map_err(KromerError::Database)?;
 
-    let response: Vec<Name> = names
-        .into_iter()
-        .map(Into::into)
-        .collect();
+    let response: Vec<Name> = names.into_iter().map(Into::into).collect();
 
     let response = NameResponse {
         ok: true,
@@ -89,13 +88,10 @@ async fn get_specific_name(
         Some(name) => {
             let name = name.into();
 
-            let response = SingularNameResponse {
-                ok: true,
-                name,
-            };
+            let response = SingularNameResponse { ok: true, name };
 
             Ok(HttpResponse::Ok().json(response))
-        },
+        }
         None => Err(KromerError::Name(NameError::NameNotFound(path_name))),
     }
 }
@@ -137,9 +133,7 @@ async fn register_name(
             // TODO: Deduct the name cost from the user's balance
             // AddressController::deduct_balance(conn, owner_address, state.name_cost).await?;
 
-            Ok(HttpResponse::Ok().json(OkResponse {
-                ok: true
-            }))
+            Ok(HttpResponse::Ok().json(OkResponse { ok: true }))
         }
         Err(e) => Err(KromerError::Database(e)),
     }
@@ -177,10 +171,7 @@ async fn get_newest_names(
         .await
         .map_err(KromerError::Database)?;
 
-    let response: Vec<Name> = names
-        .into_iter()
-        .map(Into::into)
-        .collect();
+    let response: Vec<Name> = names.into_iter().map(Into::into).collect();
 
     let response = NameResponse {
         ok: true,

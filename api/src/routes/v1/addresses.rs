@@ -71,10 +71,7 @@ async fn get_specific_address(
         Some(addr) => {
             let address = addr.into();
 
-            Ok(HttpResponse::Ok().json(SingularAddressResponse {
-                ok: true,
-                address,
-            }))
+            Ok(HttpResponse::Ok().json(SingularAddressResponse { ok: true, address }))
         }
         None => Err(KromerError::Address(AddressError::NotFound(address))),
     }
@@ -99,10 +96,7 @@ async fn get_richest_addresses(
         .await
         .map_err(KromerError::Database)?;
 
-    let addresses: Vec<Address> = richest_addresses
-        .into_iter()
-        .map(Into::into)
-        .collect();
+    let addresses: Vec<Address> = richest_addresses.into_iter().map(Into::into).collect();
 
     let response = AddressResponse {
         ok: true,
@@ -140,10 +134,7 @@ async fn get_address_transactions(
         .await
         .map_err(KromerError::Database)?;
 
-    let response: Vec<Transaction> = transactions
-        .into_iter()
-        .map(Into::into)
-        .collect();
+    let response: Vec<Transaction> = transactions.into_iter().map(Into::into).collect();
 
     let response = TransactionResponse {
         ok: true,
@@ -185,10 +176,7 @@ async fn get_address_names(
         .await
         .map_err(KromerError::Database)?;
 
-    let response: Vec<Name> = names
-        .into_iter()
-        .map(Into::into)
-        .collect();
+    let response: Vec<Name> = names.into_iter().map(Into::into).collect();
 
     let response = NameResponse {
         ok: true,
