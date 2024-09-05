@@ -11,6 +11,12 @@ pub struct TransactionResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct SingularTransactionResponse {
+    pub ok: bool,
+    pub transaction: Transaction,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Transaction {
     pub id: i32,
     pub from: Option<String>,
@@ -56,5 +62,23 @@ impl TransactionType {
         }
 
         TransactionType::Transfer
+    }
+}
+
+
+impl From<transactions::Model> for Transaction {
+    fn from(transaction: transactions::Model) -> Self {
+        Self {
+            r#type: TransactionType::indentify(&transaction),
+            id: transaction.id,
+            from: transaction.from,
+            to: transaction.to,
+            value: transaction.value,
+            time: transaction.time,
+            name: transaction.name,
+            sent_metaname: transaction.sent_metaname,
+            sent_name: transaction.sent_name,
+            metadata: transaction.metadata,
+        }
     }
 }

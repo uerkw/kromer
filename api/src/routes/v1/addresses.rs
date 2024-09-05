@@ -156,7 +156,7 @@ async fn get_address_transactions(
     let transactions = AddressController::transactions(conn, &address)
         .await
         .map_err(KromerError::Database)?;
-    let transaction_count = TransactionController::count(conn)
+    let transaction_count = TransactionController::total(conn)
         .await
         .map_err(KromerError::Database)?;
 
