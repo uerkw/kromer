@@ -27,8 +27,6 @@ impl Migration {
             )
             .await?;
 
-        // transactions_op
-
         manager
             .create_index(
                 Index::create()

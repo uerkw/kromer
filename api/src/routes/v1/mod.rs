@@ -57,4 +57,8 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
     cfg.service(whats_new);
     cfg.service(kromer_supply);
     cfg.service(get_v2_wallet);
+
+    cfg.service(web::scope("/addresses").configure(addresses::routes));
+    cfg.service(web::scope("/names").configure(names::routes));
+    cfg.service(web::scope("/transactions").configure(transactions::routes));
 }
