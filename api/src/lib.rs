@@ -2,10 +2,11 @@ pub mod errors;
 pub mod responses;
 mod routes;
 
-use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Result};
-use errors::KromerError;
-use std::env;
+use actix_governor::{Governor, GovernorConfigBuilder, KeyExtractor, SimpleKeyExtractionError};
+use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, ResponseError, Result};
+use std::{env, net::IpAddr};
 
+use errors::KromerError;
 use kromer_economy_migration::{Migrator, MigratorTrait};
 use kromer_economy_service::sea_orm::{Database, DatabaseConnection};
 
@@ -14,6 +15,9 @@ pub struct AppState {
     pub conn: DatabaseConnection,
     pub name_cost: f32,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct KromerPeerIpExtractor;
 
 #[get("/")]
 async fn hello() -> HttpResponse {
@@ -37,6 +41,13 @@ pub async fn start() -> Result<(), std::io::Error> {
     let port = env::var("PORT").expect("PORT is not set in .env file");
     let server_url = format!("{host}:{port}");
 
+    let governor_conf = GovernorConfigBuilder::default()
+        .per_second(5)
+        .burst_size(12)
+        .key_extractor(KromerPeerIpExtractor)
+        .finish()
+        .expect("Failed to create governor config");
+
     let conn = Database::connect(&db_url).await.unwrap();
     Migrator::up(&conn, None).await.unwrap();
 
@@ -47,8 +58,8 @@ pub async fn start() -> Result<(), std::io::Error> {
 
     HttpServer::new(move || {
         App::new()
-            // .service(Fs::new("/static", "./api/static"))
             .app_data(web::Data::new(state.clone()))
+            .wrap(Governor::new(&governor_conf))
             .wrap(middleware::Logger::default()) // enable logger
             .default_service(web::route().to(not_found))
             .service(hello)
@@ -59,4 +70,23 @@ pub async fn start() -> Result<(), std::io::Error> {
     .await?;
 
     Ok(())
+}
+
+impl KeyExtractor for KromerPeerIpExtractor {
+    type Key = IpAddr;
+    type KeyExtractionError = SimpleKeyExtractionError<KromerError>;
+
+    fn extract(&self, req: &actix_web::dev::ServiceRequest) -> std::result::Result<Self::Key, Self::KeyExtractionError> {
+        req.peer_addr().map(|socket| socket.ip()).ok_or_else(|| {
+            SimpleKeyExtractionError::new(KromerError::Routes(errors::RoutesError::RateLimitHit))
+        })
+    }
+
+    fn exceed_rate_limit_response(
+        &self,
+        _negative: &actix_governor::governor::NotUntil<actix_governor::governor::clock::QuantaInstant>,
+        mut _response: actix_web::HttpResponseBuilder,
+    ) -> HttpResponse {
+        errors::RoutesError::RateLimitHit.error_response()
+    }
 }

@@ -1,3 +1,4 @@
+use actix_governor::SimpleKeyExtractionError;
 use actix_web::{error, http::StatusCode, HttpResponse};
 
 mod address;

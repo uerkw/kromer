@@ -33,6 +33,7 @@ serde_json = "1.0.127"
 thiserror = "1.0.63"
 argon2 = "0.5.3"
 rand = "0.8.5"
+actix-governor = "0.5.0"
 
 [dependencies]
 kromer-economy-api = { path = "api" }
