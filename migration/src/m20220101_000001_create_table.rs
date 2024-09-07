@@ -177,7 +177,6 @@ impl MigrationTrait for Migration {
                             .null()
                             .take(),
                     )
-                    .col(ColumnDef::new(Addresses::Salt).char_len(16).null())
                     .col(
                         ColumnDef::new(Addresses::Alert)
                             .string_len(1024)
@@ -279,7 +278,6 @@ enum Addresses {
     TotalOut,
     FirstSeen,
     PrivateKey,
-    Salt,
     Alert,
     Locked,
 }
