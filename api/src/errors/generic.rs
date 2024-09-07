@@ -12,7 +12,7 @@ pub enum GenericError {
     MissingParameter(String),
 
     #[error("Validation error: {0}")]
-    ValidationError(String)
+    ValidationError(String),
 }
 
 impl error::ResponseError for GenericError {

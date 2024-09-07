@@ -10,6 +10,7 @@ use std::{env, net::IpAddr};
 use errors::KromerError;
 use kromer_economy_migration::{Migrator, MigratorTrait};
 use kromer_economy_service::sea_orm::{Database, DatabaseConnection};
+use util::cors::default_cors_config;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
@@ -59,6 +60,7 @@ pub async fn start() -> Result<(), std::io::Error> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(default_cors_config())
             .app_data(web::Data::new(state.clone()))
             .wrap(Governor::new(&governor_conf))
             .wrap(middleware::Logger::default()) // enable logger
@@ -77,7 +79,10 @@ impl KeyExtractor for KromerPeerIpExtractor {
     type Key = IpAddr;
     type KeyExtractionError = SimpleKeyExtractionError<KromerError>;
 
-    fn extract(&self, req: &actix_web::dev::ServiceRequest) -> std::result::Result<Self::Key, Self::KeyExtractionError> {
+    fn extract(
+        &self,
+        req: &actix_web::dev::ServiceRequest,
+    ) -> std::result::Result<Self::Key, Self::KeyExtractionError> {
         req.peer_addr().map(|socket| socket.ip()).ok_or_else(|| {
             SimpleKeyExtractionError::new(KromerError::Routes(errors::RoutesError::RateLimitHit))
         })
@@ -85,7 +90,9 @@ impl KeyExtractor for KromerPeerIpExtractor {
 
     fn exceed_rate_limit_response(
         &self,
-        _negative: &actix_governor::governor::NotUntil<actix_governor::governor::clock::QuantaInstant>,
+        _negative: &actix_governor::governor::NotUntil<
+            actix_governor::governor::clock::QuantaInstant,
+        >,
         mut _response: actix_web::HttpResponseBuilder,
     ) -> HttpResponse {
         errors::RoutesError::RateLimitHit.error_response()

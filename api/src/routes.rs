@@ -1,7 +1,7 @@
 use actix_web::web;
 
-pub mod v1;
 pub mod internal;
+pub mod v1;
 
 #[derive(Debug, serde::Deserialize)]
 struct LimitAndOffset {
