@@ -18,3 +18,4 @@ thiserror.workspace = true
 argon2.workspace = true
 rand.workspace = true
 actix-governor.workspace = true
+nanoid.workspace = true
