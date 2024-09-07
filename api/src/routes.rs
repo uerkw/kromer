@@ -1,6 +1,7 @@
 use actix_web::web;
 
 pub mod v1;
+pub mod internal;
 
 #[derive(Debug, serde::Deserialize)]
 struct LimitAndOffset {
@@ -9,5 +10,6 @@ struct LimitAndOffset {
 }
 
 pub fn routes(cfg: &mut web::ServiceConfig) {
+    cfg.service(web::scope("/api/_internal").configure(internal::config));
     cfg.service(web::scope("/api/v1").configure(v1::routes));
 }

@@ -1,6 +1,7 @@
 pub mod errors;
 pub mod responses;
 mod routes;
+mod util;
 
 use actix_governor::{Governor, GovernorConfigBuilder, KeyExtractor, SimpleKeyExtractionError};
 use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, ResponseError, Result};

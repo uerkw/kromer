@@ -10,6 +10,9 @@ pub enum GenericError {
 
     #[error("Missing parameter {0}")]
     MissingParameter(String),
+
+    #[error("Validation error: {0}")]
+    ValidationError(String)
 }
 
 impl error::ResponseError for GenericError {
@@ -33,6 +36,7 @@ impl KromerErrorHelper for GenericError {
         match self {
             GenericError::InvalidParameter(_) => "invalid_parameter",
             GenericError::MissingParameter(_) => "missing_parameter",
+            GenericError::ValidationError(_) => "validation_error",
         }
     }
 }
