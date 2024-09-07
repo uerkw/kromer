@@ -5,12 +5,14 @@ mod generic;
 mod name;
 mod routes;
 mod transaction;
+mod internal;
 
 pub use address::*;
 pub use generic::*;
 pub use name::*;
 pub use routes::*;
 pub use transaction::*;
+pub use internal::*;
 
 #[derive(Debug, thiserror::Error)]
 pub enum KromerError {
@@ -31,6 +33,9 @@ pub enum KromerError {
 
     #[error("")]
     Routes(#[from] routes::RoutesError),
+
+    #[error("")]
+    Internal(#[from] internal::InternalError),
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -56,6 +61,7 @@ impl error::ResponseError for KromerError {
             KromerError::Transaction(e) => e.status_code(),
             KromerError::Routes(e) => e.status_code(),
             KromerError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            KromerError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
@@ -66,6 +72,7 @@ impl error::ResponseError for KromerError {
             KromerError::Name(e) => e.error_response(),
             KromerError::Transaction(e) => e.error_response(),
             KromerError::Routes(e) => e.error_response(),
+            KromerError::Internal(e) => e.error_response(),
             KromerError::Database(e) => {
                 let error = ErrorResponse {
                     ok: false,
