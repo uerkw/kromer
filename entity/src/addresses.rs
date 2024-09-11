@@ -19,7 +19,6 @@ pub struct Model {
     pub private_key: Option<String>,
     pub alert: Option<String>,
     pub locked: bool,
-    pub salt: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

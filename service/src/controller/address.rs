@@ -166,11 +166,9 @@ impl AddressController {
         conn: &DbConn,
         private_key: &str,
     ) -> Result<Option<addresses::Model>, DbErr> {
-        // Address::find()
-        //     .filter(addresses::Column::PrivateKey.eq(private_key))
-        //     .one(conn)
-        //     .await
-
-        todo!()
+        Address::find()
+            .filter(addresses::Column::PrivateKey.eq(private_key))
+            .one(conn)
+            .await
     }
 }
