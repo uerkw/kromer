@@ -20,3 +20,5 @@ rand.workspace = true
 actix-governor.workspace = true
 nanoid.workspace = true
 actix-cors.workspace = true
+actix-web-actors.workspace = true
+actix.workspace = true

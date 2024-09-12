@@ -36,6 +36,8 @@ rand = "0.8.5"
 actix-governor = "0.5.0"
 nanoid = "0.4.0"
 actix-cors = "0.7.0"
+actix-web-actors = "4.3.1" # I am fully aware that this is deprecated, I could not care less. The examples for this are 100x better than whatever the fuck actix-ws has.
+actix = "0.13.5"
 
 [dependencies]
 kromer-economy-api = { path = "api" }

@@ -5,6 +5,7 @@ use crate::AppState;
 pub mod addresses;
 pub mod names;
 pub mod transactions;
+pub mod ws;
 
 #[derive(Debug, serde::Deserialize)]
 struct LoginDetails {
