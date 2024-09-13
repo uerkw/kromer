@@ -18,6 +18,7 @@ impl error::ResponseError for InternalError {
             ok: false,
             error: self.error_type(),
             message: Some(self.to_string()),
+            authed: None,
         };
 
         HttpResponse::build(self.status_code()).json(response)

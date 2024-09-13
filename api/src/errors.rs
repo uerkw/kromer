@@ -6,6 +6,7 @@ mod name;
 mod routes;
 mod transaction;
 mod internal;
+mod auth;
 
 pub use address::*;
 pub use generic::*;
@@ -13,6 +14,7 @@ pub use name::*;
 pub use routes::*;
 pub use transaction::*;
 pub use internal::*;
+pub use auth::*;
 
 #[derive(Debug, thiserror::Error)]
 pub enum KromerError {
@@ -36,6 +38,9 @@ pub enum KromerError {
 
     #[error("")]
     Internal(#[from] internal::InternalError),
+
+    #[error("")]
+    Auth(#[from] auth::AuthError),
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -44,6 +49,8 @@ pub struct ErrorResponse<'a> {
     pub error: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authed: Option<bool>,
 }
 
 // NOTE(sov): This might not be needed? We are using an enum for errors, we might be able to just somehow turn that into a camelCase string
@@ -62,6 +69,7 @@ impl error::ResponseError for KromerError {
             KromerError::Routes(e) => e.status_code(),
             KromerError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             KromerError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            KromerError::Auth(e) => e.status_code(),
         }
     }
 
@@ -78,10 +86,12 @@ impl error::ResponseError for KromerError {
                     ok: false,
                     error: "database_error",
                     message: Some(e.to_string()),
+                    authed: None,
                 };
 
                 HttpResponse::build(self.status_code()).json(error)
             }
+            KromerError::Auth(e) => e.error_response(),
         }
     }
 }

@@ -107,36 +107,37 @@ async fn register_name(
 
     let conn = &state.conn;
 
+    todo!("aa")
     // TODO: Implement proper authentication and address get from private key
-    let private_key = &body.private_key;
-    let owner = AddressController::get_from_private_key(conn, private_key)
-        .await
-        .map_err(KromerError::Database)?
-        .ok_or_else(|| KromerError::Address(AddressError::AuthFailed))?;
+    // let private_key = &body.private_key;
+    // let owner = AddressController::get_from_private_key_hash(conn, private_key)
+    //     .await
+    //     .map_err(KromerError::Database)?
+    //     .ok_or_else(|| KromerError::Address(AddressError::AuthFailed))?;
 
-    let name_available = NameController::is_name_available(conn, &name)
-        .await
-        .map_err(KromerError::Database)?;
+    // let name_available = NameController::is_name_available(conn, &name)
+    //     .await
+    //     .map_err(KromerError::Database)?;
 
-    if !name_available {
-        return Err(KromerError::Name(NameError::NameTaken(name)));
-    }
+    // if !name_available {
+    //     return Err(KromerError::Name(NameError::NameTaken(name)));
+    // }
 
-    if owner.balance < state.name_cost {
-        return Err(KromerError::Name(NameError::InsufficientBalance));
-    }
+    // if owner.balance < state.name_cost {
+    //     return Err(KromerError::Name(NameError::InsufficientBalance));
+    // }
 
-    let registration = NameRegistration { name, owner };
+    // let registration = NameRegistration { name, owner };
 
-    match NameController::register_name(conn, registration).await {
-        Ok(_registered_name) => {
-            // TODO: Deduct the name cost from the user's balance
-            // AddressController::deduct_balance(conn, owner_address, state.name_cost).await?;
+    // match NameController::register_name(conn, registration).await {
+    //     Ok(_registered_name) => {
+    //         // TODO: Deduct the name cost from the user's balance
+    //         // AddressController::deduct_balance(conn, owner_address, state.name_cost).await?;
 
-            Ok(HttpResponse::Ok().json(OkResponse { ok: true }))
-        }
-        Err(e) => Err(KromerError::Database(e)),
-    }
+    //         Ok(HttpResponse::Ok().json(OkResponse { ok: true }))
+    //     }
+    //     Err(e) => Err(KromerError::Database(e)),
+    // }
 }
 
 // https://krist.dev/docs/#api-NameGroup-GetNameCost

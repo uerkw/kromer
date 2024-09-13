@@ -1,3 +1,4 @@
+use argon2::{Argon2, PasswordHash, PasswordVerifier as _};
 use kromer_economy_entity::{
     addresses, addresses::Entity as Address, names, names::Entity as Name, transactions,
     transactions::Entity as Transaction,
@@ -160,14 +161,16 @@ impl AddressController {
     ///
     /// # Examples
     /// ```
-    /// let address = AddressController::get_from_private_key(&db, "pasetorules!").await?;
+    /// let db_hash = PasswordHash::new("keykeykey1")
+    ///     .map_err(|_| DbErr::Custom("Failed to parse stored password hash".to_string()))?;
+    /// let address = AddressController::get_from_private_key_hash(&db, &).await?;
     /// ```
-    pub async fn get_from_private_key(
+    pub async fn get_from_private_key_hash<'a>(
         conn: &DbConn,
-        private_key: &str,
-    ) -> Result<Option<addresses::Model>, DbErr> {
+        hash: &PasswordHash<'a>,
+    ) -> Result<Option<addresses::Model>, DbErr> {        
         Address::find()
-            .filter(addresses::Column::PrivateKey.eq(private_key))
+            .filter(addresses::Column::PrivateKey.eq(hash.serialize().to_string())) // TODO: Check using argon2 crate
             .one(conn)
             .await
     }

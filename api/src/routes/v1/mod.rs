@@ -1,6 +1,8 @@
 use actix_web::{get, post, web, Error, HttpResponse};
+use argon2::{Argon2, PasswordHash, PasswordVerifier as _, PasswordHasher as _};
+use kromer_economy_service::controller::AddressController;
 
-use crate::AppState;
+use crate::{errors::{AuthError, KromerError}, responses::v1::LoginResponse, AppState};
 
 pub mod addresses;
 pub mod names;
@@ -16,10 +18,54 @@ struct LoginDetails {
 // https://krist.dev/docs/#api-MiscellaneousGroup-Login
 #[post("/login")]
 async fn login(
-    _state: web::Data<AppState>,
-    _details: web::Json<LoginDetails>,
-) -> Result<HttpResponse, Error> {
-    Ok(HttpResponse::Ok().body("Hewwo!!"))
+    state: web::Data<AppState>,
+    details: web::Json<LoginDetails>,
+) -> Result<HttpResponse, KromerError> {
+    let private_key = &details.private_key;
+
+    if private_key.is_empty() {
+        return Ok(HttpResponse::BadRequest().json("Private key is required"));
+    }
+
+    todo!()
+
+    // let conn = &state.conn;
+
+    // println!("{}", private_key);
+
+    // let hasher = Argon2::default();
+
+    // let parsed_hash = hasher.hash_password(private_key.as_bytes(), )
+    //     .map_err(|_| KromerError::Auth(AuthError::AuthFailed))?;
+
+    // println!("{}", parsed_hash.serialize().to_string());
+
+    // let address_model = AddressController::get_from_private_key_hash(conn, &parsed_hash)
+    //     .await
+    //     .map_err(KromerError::Database)?;
+
+    // println!("got address model {:?}", address_model);
+
+    // match address_model {
+    //     Some(address) => {
+    //         let db_hash = PasswordHash::parse(&address.private_key, argon2::password_hash::Encoding::B64)
+    //             .map_err(|_| KromerError::Auth(AuthError::AuthFailed))?;
+
+    //         hasher
+    //             .verify_password(private_key.as_bytes(), &db_hash)
+    //             .map_err(|_| KromerError::Auth(AuthError::AuthFailed))?;
+
+    //         let response = LoginResponse {
+    //             ok: true,
+    //             authed: true,
+    //             address: address.address,
+    //         };
+
+    //         Ok(HttpResponse::Ok().json(response))
+    //     }
+
+    //     None => Err(KromerError::Auth(AuthError::AuthFailed)),
+    // }
 }
 
 // https://krist.dev/docs/#api-MiscellaneousGroup-GetMOTD

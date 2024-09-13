@@ -16,7 +16,7 @@ pub struct Model {
     #[sea_orm(column_type = "Float")]
     pub total_out: f32,
     pub first_seen: DateTimeWithTimeZone,
-    pub private_key: Option<String>,
+    pub private_key: String,
     pub alert: Option<String>,
     pub locked: bool,
 }
