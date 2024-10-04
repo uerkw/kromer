@@ -3,12 +3,20 @@ use serde_json::json;
 
 use crate::database::models::player::Model as Player;
 use crate::database::models::wallet::Model as Wallet;
+use crate::errors::transaction::TransactionError;
+use crate::errors::wallet::WalletError;
 use crate::{errors::KromerError, AppState};
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 struct MinecraftUser {
     pub name: String,
     pub mc_uuid: String,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+struct GiveMoneyReq {
+    pub address: String,
+    pub amount: f64,
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
@@ -59,6 +67,39 @@ async fn wallet_create(
     Ok(HttpResponse::Ok().json(resp))
 }
 
+#[post("/give-money")]
+async fn wallet_give_money(
+    state: web::Data<AppState>,
+    data: web::Json<GiveMoneyReq>,
+) -> Result<HttpResponse, KromerError> {
+    let db = &state.db;
+    let data = data.into_inner();
+
+    if data.amount < 0.0 {
+        return Err(KromerError::Transaction(TransactionError::InvalidAmount));
+    }
+
+    let wallet = Wallet::get_by_address(db, data.address)
+        .await?
+        .ok_or(KromerError::Wallet(WalletError::NotFound))?;
+    let q = "UPDATE $wallet SET balance += $amount";
+    let _ = db
+        .query(q)
+        .bind(("wallet", wallet.id.unwrap()))
+        .bind(("amount", data.amount))
+        .await?;
+
+    let resp = json!({
+        "ok": true
+    });
+
+    Ok(HttpResponse::Ok().json(resp))
+}
+
 pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(web::scope("/wallet").service(wallet_create));
+    cfg.service(
+        web::scope("/wallet")
+            .service(wallet_create)
+            .service(wallet_give_money),
+    );
 }
