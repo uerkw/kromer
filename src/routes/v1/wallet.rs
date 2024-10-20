@@ -60,7 +60,7 @@ async fn wallet_get(
     let address = address.into_inner();
     let db = &state.db;
 
-    let wallet = Wallet::get_by_address(db, address).await?;
+    let wallet = Wallet::get_by_address_excl(db, address).await?;
 
     Ok(HttpResponse::Ok().json(wallet))
 }
