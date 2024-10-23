@@ -62,7 +62,10 @@ async fn wallet_get(
 
     let wallet = Wallet::get_by_address_excl(db, address).await?;
 
-    Ok(HttpResponse::Ok().json(wallet))
+    match wallet {
+        Some(wallet) => Ok(HttpResponse::Ok().json(wallet)),
+        None => Err(KromerError::Wallet(WalletError::NotFound)),
+    }
 }
 
 pub fn config(cfg: &mut web::ServiceConfig) {
