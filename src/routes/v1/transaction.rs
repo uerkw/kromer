@@ -39,7 +39,7 @@ async fn transaction_get(
     let id = id.into_inner();
     let db = &state.db;
 
-    let slim = Transaction::get(db, id).await?;
+    let slim = Transaction::get_partial(db, id).await?;
 
     Ok(HttpResponse::Ok().json(slim))
 }
