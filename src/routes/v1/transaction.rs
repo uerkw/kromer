@@ -64,6 +64,11 @@ async fn transaction_create(
         .await?
         .ok_or_else(|| KromerError::Wallet(WalletError::NotFound))?;
 
+    // Make sure to check the request to see if the funds are available.
+    if sender.balance < details.amount {
+        return Err(KromerError::Transaction(TransactionError::InsufficientFunds))
+    }
+
     let creation_data = TransactionCreateData {
         from: sender.id.unwrap(), // `unwrap` should be fine here, we already made sure it exists.
         to: recipient.id.unwrap(),
