@@ -66,7 +66,9 @@ async fn transaction_create(
 
     // Make sure to check the request to see if the funds are available.
     if sender.balance < details.amount {
-        return Err(KromerError::Transaction(TransactionError::InsufficientFunds))
+        return Err(KromerError::Transaction(
+            TransactionError::InsufficientFunds,
+        ));
     }
 
     let creation_data = TransactionCreateData {

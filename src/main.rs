@@ -1,12 +1,14 @@
 use std::env;
 
 use actix_web::{middleware, web, App, HttpServer};
+use actix::Actor;
+use kromer::websockets::server::WebSocketServer;
 use surrealdb::opt::auth::Root;
 
 use kromer::database::db::{ConnectionOptions, Database};
 use kromer::{errors::KromerError, routes, AppState};
 
-#[tokio::main]
+#[actix_web::main]
 async fn main() -> Result<(), KromerError> {
     env::set_var("RUST_LOG", "debug");
     tracing_subscriber::fmt::init();
@@ -38,7 +40,9 @@ async fn main() -> Result<(), KromerError> {
 
     let db = Database::connect(&surreal_endpoint, &connect_options).await?;
 
-    let state = AppState { db };
+    let ws_manager = WebSocketServer::new().start();
+
+    let state = AppState { db, ws_manager };
 
     HttpServer::new(move || {
         App::new()
