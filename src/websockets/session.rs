@@ -86,15 +86,12 @@ impl KromerWsSession {
     }
 
     pub fn list_rooms(&mut self, ctx: &mut ws::WebsocketContext<Self>) {
-        tracing::debug!("Starting listing of rooms");
-
         WebSocketServer::from_registry()
             .send(ListRooms)
             .into_actor(self)
             .then(|res, _, ctx| {
                 if let Ok(rooms) = res {
                     for room in rooms {
-                        tracing::debug!("Room was {room}");
                         ctx.text(room);
                     }
                 }
@@ -135,15 +132,10 @@ impl Actor for KromerWsSession {
     type Context = ws::WebsocketContext<Self>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
-        tracing::debug!("Default Room Value is {}", self.room.clone().as_str());
         self.join_room(self.room.clone().as_str(), self.id, ctx);
-        //self.subscribe_system_async::<KromerMessage>(ctx);
     }
 
     fn stopped(&mut self, _ctx: &mut Self::Context) {
-        //let leave_msg = LeaveRoom(self.room.clone(), self.id);
-        //self.issue_system_sync(leave_msg, _ctx);
-
         tracing::info!(
             "KromerWsSession closed for {}({}) in room {}",
             self.name.clone().unwrap_or_else(|| "anon".to_owned()),
@@ -171,8 +163,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for KromerWsSession {
             Ok(msg) => msg,
         };
 
-        tracing::debug!("WEBSOCKET MESSAGE: {msg:?}");
-
         match msg {
             ws::Message::Text(text) => {
                 let msg = text.trim();
@@ -186,7 +176,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for KromerWsSession {
                         Some("/join") => {
                             if let Some(room_name) = command.next() {
                                 let socket_uuid = self.id;
-                                tracing::debug!("Requested room change to {room_name}");
                                 self.join_room(room_name, socket_uuid, ctx);
                             } else {
                                 ctx.text("!!! room name is required");
@@ -196,7 +185,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for KromerWsSession {
                         Some("/name") => {
                             if let Some(name) = command.next() {
                                 self.name = Some(name.to_owned());
-                                tracing::debug!("Requested name change to {name}");
                                 ctx.text(format!("name changed to: {name}"));
                             } else {
                                 ctx.text("!!! name is required");

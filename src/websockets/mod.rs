@@ -40,7 +40,6 @@ pub async fn payload_ws(
 
     // Extract the token
     let token = token.into_inner();
-    tracing::debug!("Token was {token}");
 
     let session_id =
         Uuid::from_str(&token).map_err(|_| KromerError::WebSocket(WebSocketError::UuidNotFound));

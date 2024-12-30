@@ -115,9 +115,7 @@ impl Handler<JoinRoom> for WebSocketServer {
 
     fn handle(&mut self, msg: JoinRoom, _ctx: &mut Self::Context) -> Self::Result {
         let JoinRoom(room_name, uuid, client_name, client) = msg;
-
         let id = self.add_client_to_room(&room_name, Some(uuid), client);
-
         let join_msg = format!(
             "{} joined {room_name}",
             client_name.unwrap_or_else(|| "anon".to_owned()),
@@ -134,10 +132,6 @@ impl Handler<CreateRoom> for WebSocketServer {
     fn handle(&mut self, msg: CreateRoom, _ctx: &mut Self::Context) -> Self::Result {
         let CreateRoom(client_name) = msg;
         let room_name = self.create_room();
-
-        let creation_msg = format!("{} created {room_name}", client_name.unwrap());
-
-        tracing::debug!(creation_msg);
 
         MessageResult(room_name)
     }
