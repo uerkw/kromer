@@ -4,7 +4,10 @@ use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
 use surrealdb::Uuid;
 
-use crate::websockets::message::{JoinRoom, KromerMessage, LeaveRoom, ListRooms, SendMessage};
+use crate::{
+    errors::{websocket::WebSocketError, KromerError},
+    websockets::message::{JoinRoom, KromerMessage, LeaveRoom, ListRooms, SendMessage},
+};
 
 type Client = Recipient<KromerMessage>;
 type Room = HashMap<Uuid, Client>;
@@ -131,6 +134,10 @@ impl Handler<CreateRoom> for WebSocketServer {
 
     fn handle(&mut self, msg: CreateRoom, _ctx: &mut Self::Context) -> Self::Result {
         let CreateRoom(client_name) = msg;
+        tracing::info!(
+            "Creating room with client name: {:?}",
+            client_name.ok_or_else(|| KromerError::WebSocket(WebSocketError::RoomCreation))
+        );
         let room_name = self.create_room();
 
         MessageResult(room_name)
