@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use actix_web::{
     web::{self, Data},
-    Error, HttpRequest, Responder,
+    HttpRequest, Responder,
 };
 
 use actix_web_actors::ws;
@@ -15,7 +15,10 @@ use names::Generator;
 
 use surrealdb::Uuid;
 
-use crate::AppState;
+use crate::{
+    errors::{websocket::WebSocketError, KromerError},
+    AppState,
+};
 
 pub fn generate_room_name() -> String {
     let mut generator = Generator::default();
@@ -30,7 +33,7 @@ pub async fn payload_ws(
     stream: web::Payload,
     state: Data<AppState>,
     token: web::Path<String>,
-) -> Result<impl Responder, Error> {
+) -> Result<impl Responder, KromerError> {
     // Grab our app state
     //let db = &state.db;
     let ws_manager = (&state.ws_manager).clone();
@@ -39,19 +42,28 @@ pub async fn payload_ws(
     let token = token.into_inner();
     tracing::debug!("Token was {token}");
 
-    let session_id = Uuid::from_str(&token).expect("Could not parse UUID");
+    let session_id =
+        Uuid::from_str(&token).map_err(|_| KromerError::WebSocket(WebSocketError::UuidNotFound));
+    let session_id = match session_id {
+        Ok(v) => v,
+        Err(e) => {
+            return Err(e);
+        }
+    };
 
     let cache_lookup_msg = GetCacheConnection(session_id);
     let session = ws_manager
         .send(cache_lookup_msg)
         .await
-        .expect("Could not find token in the cache");
+        .map_err(|_| KromerError::WebSocket(WebSocketError::UuidNotFound))?;
 
-    let response_ws = ws::start(session.unwrap(), &req, stream);
-
-    // session.
-
-    response_ws
+    match session {
+        Some(value) => {
+            let response_ws = ws::start(value, &req, stream);
+            Ok(response_ws)
+        }
+        None => Err(KromerError::WebSocket(WebSocketError::UuidNotFound)),
+    }
 }
 
 #[derive(Debug, Clone)]
