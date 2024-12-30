@@ -10,7 +10,12 @@ pub struct KromerMessage(pub String);
 //// Protect this for Admins only
 #[derive(Clone, Message)]
 #[rtype(result = "Uuid")]
-pub struct JoinRoom(pub String, pub Uuid, pub Option<String>, pub Recipient<KromerMessage>);
+pub struct JoinRoom(
+    pub String,
+    pub Uuid,
+    pub Option<String>,
+    pub Recipient<KromerMessage>,
+);
 
 #[derive(Clone, Message)]
 #[rtype(result = "String")]
@@ -34,7 +39,7 @@ pub struct SendMessage(pub String, pub Uuid, pub String);
 pub struct SetCacheConnection(pub Uuid, pub KromerWsSession);
 
 #[derive(Message)]
-#[rtype(result="Option<KromerWsSession>")]
+#[rtype(result = "Option<KromerWsSession>")]
 pub struct GetCacheConnection(pub Uuid);
 
 #[derive(Clone, Message)]

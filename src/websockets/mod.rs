@@ -17,15 +17,12 @@ use surrealdb::Uuid;
 
 use crate::AppState;
 
-
-
 pub fn generate_room_name() -> String {
     let mut generator = Generator::default();
     let gen_name_1 = generator.next().unwrap();
     let gen_name_2 = generator.next().unwrap();
     format!("{gen_name_1}-{gen_name_2}")
 }
-
 
 // This is the main Service for the WebSocket at "/ws/token/{id}"
 pub async fn payload_ws(
@@ -42,13 +39,15 @@ pub async fn payload_ws(
     let token = token.into_inner();
     tracing::debug!("Token was {token}");
 
-
     let session_id = Uuid::from_str(&token).expect("Could not parse UUID");
 
     let cache_lookup_msg = GetCacheConnection(session_id);
-    let session = ws_manager.send(cache_lookup_msg).await.expect("Could not find token in the cache");
+    let session = ws_manager
+        .send(cache_lookup_msg)
+        .await
+        .expect("Could not find token in the cache");
 
-    let response_ws= ws::start(session.unwrap(), &req, stream);
+    let response_ws = ws::start(session.unwrap(), &req, stream);
 
     // session.
 
@@ -58,7 +57,7 @@ pub async fn payload_ws(
 #[derive(Debug, Clone)]
 enum KromerAddress {
     Guest,
-    Custom
+    Custom,
 }
 
 impl Default for KromerAddress {
@@ -77,7 +76,6 @@ impl KromerAddress {
     }
 }
 
-
 #[derive(Default)]
 struct KromerWsSubList {
     subscriptions: Vec<WebSocketSubscriptionType>,
@@ -85,8 +83,8 @@ struct KromerWsSubList {
 
 impl Clone for KromerWsSubList {
     fn clone(&self) -> Self {
-        KromerWsSubList{
-            subscriptions: self.subscriptions.clone()
+        KromerWsSubList {
+            subscriptions: self.subscriptions.clone(),
         }
     }
 }

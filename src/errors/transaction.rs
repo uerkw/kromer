@@ -12,7 +12,7 @@ pub enum TransactionError {
     FailedCreate,
 
     #[error("Sender has insufficient funds")]
-    InsufficientFunds
+    InsufficientFunds,
 }
 
 impl error::ResponseError for TransactionError {

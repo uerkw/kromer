@@ -1,7 +1,7 @@
 use std::env;
 
-use actix_web::{middleware, web, App, HttpServer};
 use actix::Actor;
+use actix_web::{middleware, web, App, HttpServer};
 use kromer::websockets::server::WebSocketServer;
 use surrealdb::opt::auth::Root;
 

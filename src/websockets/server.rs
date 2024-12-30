@@ -11,21 +11,24 @@ type Room = HashMap<Uuid, Client>;
 
 use names::Generator;
 
-use super::{message::{CreateRoom, GetActiveSessions, GetCacheConnection, SetCacheConnection}, session::KromerWsSession};
+use super::{
+    message::{CreateRoom, GetActiveSessions, GetCacheConnection, SetCacheConnection},
+    session::KromerWsSession,
+};
 
 pub type CachedWebSocket = Addr<KromerWsSession>;
 
 #[derive(Default)]
 pub struct WebSocketServer {
     rooms: HashMap<String, Room>,
-    sessions: HashMap<Uuid, KromerWsSession>
+    sessions: HashMap<Uuid, KromerWsSession>,
 }
 
 impl WebSocketServer {
     pub fn new() -> Self {
         WebSocketServer {
             rooms: HashMap::new(),
-            sessions: HashMap::new()
+            sessions: HashMap::new(),
         }
     }
 
@@ -57,10 +60,9 @@ impl WebSocketServer {
         None
     }
 
-    pub fn add_client_to_sessions(&mut self, uuid: Uuid, conn_to_cache: KromerWsSession){
+    pub fn add_client_to_sessions(&mut self, uuid: Uuid, conn_to_cache: KromerWsSession) {
         self.sessions.insert(uuid, conn_to_cache);
     }
-
 
     fn add_client_to_room(&mut self, room_name: &str, uuid: Option<Uuid>, client: Client) -> Uuid {
         let mut parsed_uuid = uuid.unwrap();
@@ -76,8 +78,8 @@ impl WebSocketServer {
 
             room.insert(parsed_uuid, client);
             return parsed_uuid;
-        } 
-        
+        }
+
         let mut room: Room = HashMap::new();
         // Create a new room for the first client
         room.insert(parsed_uuid, client);
@@ -97,7 +99,6 @@ impl WebSocketServer {
 
         Some(())
     }
-
 }
 
 impl Actor for WebSocketServer {
@@ -117,7 +118,6 @@ impl Handler<JoinRoom> for WebSocketServer {
 
         let id = self.add_client_to_room(&room_name, Some(uuid), client);
 
-
         let join_msg = format!(
             "{} joined {room_name}",
             client_name.unwrap_or_else(|| "anon".to_owned()),
@@ -131,13 +131,11 @@ impl Handler<JoinRoom> for WebSocketServer {
 impl Handler<CreateRoom> for WebSocketServer {
     type Result = MessageResult<CreateRoom>;
 
-    fn handle(&mut self, msg:CreateRoom,  _ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: CreateRoom, _ctx: &mut Self::Context) -> Self::Result {
         let CreateRoom(client_name) = msg;
         let room_name = self.create_room();
 
-        let creation_msg = format!(
-            "{} created {room_name}", client_name.unwrap()
-        );
+        let creation_msg = format!("{} created {room_name}", client_name.unwrap());
 
         tracing::debug!(creation_msg);
 
@@ -178,7 +176,7 @@ impl Handler<SendMessage> for WebSocketServer {
 impl Handler<SetCacheConnection> for WebSocketServer {
     type Result = ();
 
-    fn handle(&mut self, msg: SetCacheConnection, _ctx: &mut Self::Context){
+    fn handle(&mut self, msg: SetCacheConnection, _ctx: &mut Self::Context) {
         let SetCacheConnection(uuid, conn_to_cache) = msg;
 
         self.add_client_to_sessions(uuid, conn_to_cache);
@@ -190,7 +188,6 @@ impl Handler<GetCacheConnection> for WebSocketServer {
 
     fn handle(&mut self, msg: GetCacheConnection, _ctx: &mut Self::Context) -> Self::Result {
         let GetCacheConnection(uuid) = msg;
-
 
         let result = self.sessions.get(&uuid).cloned();
 
@@ -211,7 +208,6 @@ impl Handler<GetActiveSessions> for WebSocketServer {
         MessageResult(self.sessions.keys().cloned().collect())
     }
 }
-
 
 impl SystemService for WebSocketServer {}
 impl Supervised for WebSocketServer {}

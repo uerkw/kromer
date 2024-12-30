@@ -14,10 +14,10 @@ pub enum WebSocketError {
     RoomCreation,
 
     #[error("Server configuration issue, contact an admin")]
-    ServerConfigError, 
+    ServerConfigError,
 
     #[error("UUID was not found in server cache")]
-    UuidNotFound
+    UuidNotFound,
 }
 
 impl From<WebSocketError> for ActixError {

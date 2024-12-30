@@ -6,7 +6,7 @@ use actix_web_actors::ws;
 use surrealdb::Uuid;
 
 use crate::websockets::{
-    message::{KromerMessage, JoinRoom, LeaveRoom, ListRooms, SendMessage},
+    message::{JoinRoom, KromerMessage, LeaveRoom, ListRooms, SendMessage},
     server::WebSocketServer,
 };
 
@@ -22,7 +22,6 @@ pub struct KromerWsSession {
     privatekey: Option<String>,
     subscriptions: KromerWsSubList,
 }
-
 
 impl KromerWsSession {
     pub fn new(
@@ -46,12 +45,17 @@ impl KromerWsSession {
             address,
             privatekey,
             subscriptions,
-        };       
+        };
 
         return session;
     }
 
-    pub fn join_room(&mut self, room_name: &str, socket_uuid: Uuid, ctx: &mut ws::WebsocketContext<Self>) {
+    pub fn join_room(
+        &mut self,
+        room_name: &str,
+        socket_uuid: Uuid,
+        ctx: &mut ws::WebsocketContext<Self>,
+    ) {
         let room_name = room_name.to_owned();
 
         let leave_msg = LeaveRoom(self.room.clone(), self.id);
@@ -83,7 +87,7 @@ impl KromerWsSession {
 
     pub fn list_rooms(&mut self, ctx: &mut ws::WebsocketContext<Self>) {
         tracing::debug!("Starting listing of rooms");
-        
+
         WebSocketServer::from_registry()
             .send(ListRooms)
             .into_actor(self)
@@ -111,19 +115,18 @@ impl KromerWsSession {
         // issue_async comes from having the `BrokerIssue` trait in scope.
         self.issue_system_async(msg);
     }
-
 }
 
 impl Clone for KromerWsSession {
     fn clone(&self) -> Self {
-        KromerWsSession {        
+        KromerWsSession {
             id: self.id.clone(),
             room: self.room.clone(),
             name: self.name.clone(),
             manager: self.manager.clone(),
             address: self.address.clone(),
             privatekey: self.privatekey.clone(),
-            subscriptions: self.subscriptions.clone()
+            subscriptions: self.subscriptions.clone(),
         }
     }
 }
