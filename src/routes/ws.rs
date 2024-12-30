@@ -23,8 +23,6 @@ pub struct WebSocketInitData {
 #[post("/start")]
 async fn request_token(
     state: web::Data<AppState>,
-    //req: HttpRequest,
-    //stream: web::Payload,
     details: web::Json<WebSocketInitData>,
 ) -> Result<HttpResponse, KromerError> {
     // Grab our app state
@@ -49,26 +47,16 @@ async fn request_token(
         }
     }
 
-    // For now, log this WS name to the console
-    tracing::debug!("Created a WS room with name: {room_name_msg}");
-
     let new_uuid = Uuid::new_v4();
-
     let schema = "ws";
     let host =
-        env::var("HOST").map_err(|_| KromerError::WebSocket(WebSocketError::ServerConfigError));
+        env::var("HOST").map_err(|_| KromerError::WebSocket(WebSocketError::ServerConfigError))?;
     let port =
-        env::var("PORT").map_err(|_| KromerError::WebSocket(WebSocketError::ServerConfigError));
-
-    let host = host.unwrap();
-    let port = port.unwrap();
+        env::var("PORT").map_err(|_| KromerError::WebSocket(WebSocketError::ServerConfigError))?;
 
     let server_url = format!("{host}:{port}");
-
     let full_url = format!("{schema}://{server_url}/ws/gateway/{new_uuid}");
-
     let mut address = Some(String::from("guest"));
-    //let mut kromer_address= KromerAddress::from_string("guest".to_string());
 
     if let Some(privatekey) = ws_privatekey {
         // Verify the wallet address
@@ -90,15 +78,9 @@ async fn request_token(
         ws_privatekey.clone(),
         ws_name.clone(),
     );
-    // let session_addr = ws::WsResponseBuilder::new(session, &req, stream).start_with_addr();
-    // let session_addr = session_addr.unwrap();
-    // let conn_to_cache = session_addr.0;
-
+    // Construct the message and send it to be cached
     let conn_to_cache = session;
-
-    // // Construct the message and send it to be cached
     let conn_cache_request = SetCacheConnection(new_uuid, conn_to_cache);
-
     let msg_result = ws_manager.send(conn_cache_request).await;
 
     match msg_result {
