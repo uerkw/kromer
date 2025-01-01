@@ -57,16 +57,7 @@ pub async fn payload_ws(
     );
 
     let ws_actor_addr = wrapped_ws_session.start();
-    let cloned_ws_actor_addr = ws_actor_addr.clone();
-
-    let future_ws_manager = _ws_manager.clone();
-    let future = async move {
-        let _ = future_ws_manager
-            .send(SetCacheConnection(token_uuid, ws_actor_addr))
-            .await;
-    };
-
-    actix::spawn(future);
+    _ws_manager.send(SetCacheConnection(token_uuid, ws_actor_addr)).await;
 
     let thread_ws_manager = _ws_manager.clone();
 
