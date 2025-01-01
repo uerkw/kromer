@@ -40,13 +40,11 @@ pub async fn payload_ws(
         Uuid::from_str(&token).map_err(|_| KromerError::WebSocket(WebSocketError::UuidNotFound));
 
     let (response, mut _session, mut _msg_stream) = actix_ws::handle(&req, body)
-        .or_else(|_| Err(WebSocketError::RoomCreation))
-        .unwrap();
+        .or_else(|_| Err(WebSocketError::RoomCreation))?;
 
     let address = Some(KromerAddress::from_string("guest".to_string()));
     let token_uuid = Uuid::from_str(&token)
-        .or_else(|_| Err(WebSocketError::UuidNotFound))
-        .unwrap();
+        .or_else(|_| Err(WebSocketError::UuidNotFound))?;
 
     let wrapped_ws_session = WebSocketSession::new(
         token_uuid,
