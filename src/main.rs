@@ -2,7 +2,9 @@ use std::env;
 
 use actix::Actor;
 use actix_web::{middleware, web, App, HttpServer};
+
 use kromer::websockets::server::WebSocketServer;
+use kromer::ws::server::WebSocketServer as NewWebSocketServer;
 use surrealdb::opt::auth::Root;
 
 use kromer::database::db::{ConnectionOptions, Database};
@@ -42,7 +44,13 @@ async fn main() -> Result<(), KromerError> {
 
     let ws_manager = WebSocketServer::new().start();
 
-    let state = AppState { db, ws_manager };
+    let new_ws_manager = NewWebSocketServer::new().start();
+
+    let state = AppState {
+        db,
+        ws_manager,
+        new_ws_manager,
+    };
 
     HttpServer::new(move || {
         App::new()

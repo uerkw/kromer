@@ -6,6 +6,7 @@ use crate::websockets::payload_ws;
 
 pub mod index;
 pub mod internal;
+pub mod new_ws;
 pub mod not_found;
 pub mod v1;
 pub mod ws;
@@ -36,6 +37,11 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         web::scope("/ws")
             .service(ws::request_token)
             .service(web::resource("/gateway/{token}").to(payload_ws)),
+    );
+    cfg.service(
+        web::scope("/new_ws")
+            //.service(new_ws::request_token)
+            .service(new_ws::payload_ws),
     );
     cfg.service(web::scope("").service(index::index_get));
 }

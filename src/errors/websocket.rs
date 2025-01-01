@@ -18,6 +18,9 @@ pub enum WebSocketError {
 
     #[error("UUID was not found in server cache")]
     UuidNotFound,
+
+    #[error("Error parsing Kromer Address")]
+    KromerAddressError,
 }
 
 impl From<WebSocketError> for ActixError {
