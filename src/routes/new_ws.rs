@@ -7,11 +7,19 @@ use actix_web::{
     HttpRequest, Responder,
 };
 
-use actix_ws::Message;
+use actix_ws::{CloseCode, CloseReason, Message};
 use surrealdb::Uuid;
 
 use crate::{
-    errors::{websocket::WebSocketError, KromerError}, ws::{session::WebSocketSession, types::{actor_message::{CloseWebSocket, SetCacheConnection}, session::KromerAddress}}, AppState
+    errors::{websocket::WebSocketError, KromerError},
+    ws::{
+        actors::session::WebSocketSession,
+        types::{
+            actor_message::{CloseWebSocket, GetActiveSessions, SetCacheConnection},
+            session::KromerAddress,
+        },
+    },
+    AppState,
 };
 
 pub struct WebSocketInitData {
@@ -36,37 +44,70 @@ pub async fn payload_ws(
         .unwrap();
 
     let address = Some(KromerAddress::from_string("guest".to_string()));
-    let token_uuid = Uuid::from_str(&token).or_else(|_| Err(WebSocketError::UuidNotFound)).unwrap();
+    let token_uuid = Uuid::from_str(&token)
+        .or_else(|_| Err(WebSocketError::UuidNotFound))
+        .unwrap();
 
-    let wrapped_ws_session = WebSocketSession::new(token_uuid, address, Some("privatekey".to_string()), _session);
+    let wrapped_ws_session = WebSocketSession::new(
+        token_uuid,
+        address,
+        Some("privatekey".to_string()),
+        _session,
+        _ws_manager.clone(),
+    );
 
     let ws_actor_addr = wrapped_ws_session.start();
     let cloned_ws_actor_addr = ws_actor_addr.clone();
 
-
+    let future_ws_manager = _ws_manager.clone();
     let future = async move {
-        let _ = _ws_manager.send(SetCacheConnection(token_uuid, ws_actor_addr)).await;
+        let _ = future_ws_manager
+            .send(SetCacheConnection(token_uuid, ws_actor_addr))
+            .await;
     };
 
     actix::spawn(future);
 
-    //let cached_conn = _ws_manager.send(GetCacheConnection(token_uuid)).await.or_else(|_| Err(WebSocketError::RoomCreation)).unwrap().unwrap();
-
+    let thread_ws_manager = _ws_manager.clone();
 
     actix_web::rt::spawn(async move {
+        let get_active_sessions_msg = GetActiveSessions;
+        let active_sessions = thread_ws_manager.send(get_active_sessions_msg).await;
+        tracing::debug!(
+            "[SPAWNED_WS_THREAD] Active Sessions Before Close: {:?}",
+            active_sessions
+        );
+
+        let mut close_reason: CloseReason = CloseReason {
+            code: CloseCode::Normal,
+            description: Some("WebSocket Closed".to_string()),
+        };
         while let Some(Ok(msg)) = _msg_stream.recv().await {
             match msg {
-                Message::Close(_msg) => {
+                Message::Close(reason) => {
+                    close_reason = reason.unwrap_or_else(|| close_reason);
+                    tracing::debug!(
+                        "[SPAWNED_WS_THREAD] Client WS Closed with Code: {:?}, Description: {:?}",
+                        close_reason.code,
+                        close_reason.description
+                    );
                     break;
                 }
-                Message::Text(msg) => tracing::debug!("Got text: {msg}"),
+                Message::Text(msg) => tracing::debug!("[SPAWNED_WS_THREAD] Got text, msg: {msg}"),
                 _ => break,
             }
         }
 
-        let actor_close_message = CloseWebSocket;
+        let actor_close_message = CloseWebSocket(close_reason);
         let _ = cloned_ws_actor_addr.send(actor_close_message).await;
     });
 
+    let cleanup_ws_manager = _ws_manager.clone();
+    let get_active_sessions_msg = GetActiveSessions;
+    let active_sessions = cleanup_ws_manager.send(get_active_sessions_msg).await;
+    tracing::debug!(
+        "[SPAWNED_WS_THREAD] Active Sessions Before Open: {:?}",
+        active_sessions
+    );
     Ok(response)
 }

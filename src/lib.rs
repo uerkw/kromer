@@ -1,7 +1,7 @@
 use actix::Addr;
 use surrealdb::{engine::any::Any, Surreal};
 use websockets::server::WebSocketServer;
-use ws::server::WebSocketServer as NewWebSocketServer;
+use ws::actors::server::WebSocketServer as NewWebSocketServer;
 
 pub mod database;
 pub mod errors;

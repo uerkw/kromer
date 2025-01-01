@@ -4,7 +4,7 @@ use actix::Actor;
 use actix_web::{middleware, web, App, HttpServer};
 
 use kromer::websockets::server::WebSocketServer;
-use kromer::ws::server::WebSocketServer as NewWebSocketServer;
+use kromer::ws::actors::server::WebSocketServer as NewWebSocketServer;
 use surrealdb::opt::auth::Root;
 
 use kromer::database::db::{ConnectionOptions, Database};

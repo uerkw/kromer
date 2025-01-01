@@ -5,11 +5,12 @@ use actix::{Actor, Context, Handler, MessageResult};
 use actix_broker::BrokerSubscribe;
 use surrealdb::Uuid;
 
-use crate::ws::types::actor_message::ReceiveMessage;
-
-use super::{
-    session::WebSocketSession,
-    types::actor_message::{GetActiveSessions, GetCacheConnection, SetCacheConnection},
+use crate::ws::{
+    actors::session::WebSocketSession,
+    types::actor_message::{
+        GetActiveSessions, GetCacheConnection, ReceiveMessage, RemoveCacheConnection,
+        SetCacheConnection,
+    },
 };
 
 #[derive(Default)]
@@ -30,7 +31,6 @@ impl WebSocketServer {
 
     fn send_payload_message(&mut self, id: Uuid, msg: &str) {
         tracing::debug!("Received, ID: {id}, msg: {msg}");
-        
     }
 }
 
@@ -38,7 +38,7 @@ impl Actor for WebSocketServer {
     type Context = Context<Self>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
-        tracing::info!("Started WS Server Actor");
+        tracing::info!("[WS_SERVER_ACTOR] Started WS Server Actor");
         self.subscribe_system_async::<ReceiveMessage>(ctx);
     }
 }
@@ -71,6 +71,17 @@ impl Handler<GetCacheConnection> for WebSocketServer {
         let result = self.sessions.get(&uuid).cloned();
 
         MessageResult(result)
+    }
+}
+
+impl Handler<RemoveCacheConnection> for WebSocketServer {
+    type Result = ();
+
+    fn handle(&mut self, msg: RemoveCacheConnection, _ctx: &mut Self::Context) -> Self::Result {
+        let RemoveCacheConnection(uuid) = msg;
+        tracing::debug!("[WS_SERVER_ACTOR] Message recevied to remove UUID from cache: {uuid}");
+
+        self.sessions.remove(&uuid);
     }
 }
 

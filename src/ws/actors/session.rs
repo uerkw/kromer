@@ -1,6 +1,9 @@
-use super::types::actor_message::{CloseWebSocket, KromerMessage, ReceiveMessage};
-use super::types::session::{KromerAddress, KromerWsSubList};
 use crate::errors::websocket::WebSocketError;
+use crate::ws::actors::server::WebSocketServer;
+use crate::ws::types::actor_message::{
+    CloseWebSocket, KromerMessage, ReceiveMessage, RemoveCacheConnection,
+};
+use crate::ws::types::session::{KromerAddress, KromerWsSubList};
 use actix::prelude::*;
 use actix::Actor;
 use actix_ws as ws;
@@ -13,6 +16,7 @@ pub struct WebSocketSession {
     _privatekey: Option<String>,
     _subscriptions: KromerWsSubList,
     ws_session: Option<ws::Session>,
+    ws_manager: Addr<WebSocketServer>,
 }
 
 impl WebSocketSession {
@@ -21,6 +25,7 @@ impl WebSocketSession {
         address: Option<KromerAddress>,
         privatekey: Option<String>,
         ws_session: ws::Session,
+        ws_manager: Addr<WebSocketServer>,
     ) -> Self {
         let subscriptions = KromerWsSubList::new();
         let address = Some(
@@ -35,12 +40,13 @@ impl WebSocketSession {
             _privatekey: privatekey,
             _subscriptions: subscriptions,
             ws_session,
+            ws_manager,
         }
     }
 
     pub fn recieve_msg(&self, msg: &str) {
         let msg = ReceiveMessage(self.id, msg.to_string());
-        tracing::debug!("{}", msg.to_string());
+        tracing::debug!("[WS_SESSION_ACTOR][RECEIVE] {}", msg.to_string());
         //self.issue_system_async(msg);
     }
 }
@@ -49,13 +55,13 @@ impl Actor for WebSocketSession {
     type Context = actix::Context<Self>;
 
     fn started(&mut self, _ctx: &mut Self::Context) {
-        tracing::info!("Started WS Actor for {}", self.id);
+        tracing::debug!("[WS_SESSION_ACTOR] Started WS Actor for {}", self.id);
     }
     fn stopped(&mut self, _ctx: &mut Self::Context) {
         // Close the WS
         if let Some(session) = self.ws_session.take() {
             let future = async move {
-               let _ = session.close(None).await;
+                let _ = session.close(None).await;
             };
 
             actix::spawn(future);
@@ -64,7 +70,10 @@ impl Actor for WebSocketSession {
         _ctx.stop();
 
         // Info to console
-        tracing::info!("Kromer WS Session closed for ID: {}", self.id)
+        tracing::debug!(
+            "[WS_SESSION_ACTOR] Kromer WS Session closed for ID: {}",
+            self.id
+        )
     }
 }
 
@@ -85,16 +94,33 @@ impl Handler<KromerMessage> for WebSocketSession {
 
 impl Handler<CloseWebSocket> for WebSocketSession {
     type Result = ();
-    
+
     fn handle(&mut self, _msg: CloseWebSocket, _ctx: &mut Self::Context) {
+        let CloseWebSocket(close_reason) = _msg;
+        let cloned_close_reason = close_reason.clone();
         // Close the WS
         if let Some(session) = self.ws_session.take() {
             let future = async move {
-               let _ = session.close(None).await;
+                let _ = session.close(Some(close_reason)).await;
             };
 
             actix::spawn(future);
         }
+        tracing::debug!(
+            "[WS_SESSION_ACTOR] Receiving WS Close Request with Code: {:?} Reason: {}",
+            cloned_close_reason.code,
+            cloned_close_reason.description.unwrap_or_default()
+        );
+
+        let uuid_to_remove = self.id.clone();
+        let thread_ws_manager = self.ws_manager.clone();
+        let future = async move {
+            let remove_from_cache_msg = RemoveCacheConnection(uuid_to_remove);
+            let _ = thread_ws_manager.send(remove_from_cache_msg).await;
+        };
+
+        actix::spawn(future);
+
         // Stop the actor
         _ctx.stop()
     }

@@ -1,7 +1,8 @@
 use actix::prelude::*;
+use actix_ws::CloseReason;
 use surrealdb::Uuid;
 
-use crate::ws::session::WebSocketSession;
+use crate::ws::actors::session::WebSocketSession;
 
 #[derive(Clone, Message)]
 #[rtype(result = "()")]
@@ -25,10 +26,14 @@ pub struct SetCacheConnection(pub Uuid, pub Addr<WebSocketSession>);
 #[rtype(result = "Option<Addr<WebSocketSession>>")]
 pub struct GetCacheConnection(pub Uuid);
 
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct RemoveCacheConnection(pub Uuid);
+
 #[derive(Clone, Message)]
 #[rtype(result = "Vec<Uuid>")]
 pub struct GetActiveSessions;
 
 #[derive(Message)]
 #[rtype(result = "()")]
-pub struct CloseWebSocket;
+pub struct CloseWebSocket(pub CloseReason);
