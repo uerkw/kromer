@@ -1,4 +1,3 @@
-use crate::errors::websocket::WebSocketError;
 use crate::ws::actors::server::WebSocketServer;
 use crate::ws::types::actor_message::{
     CloseWebSocket, KromerMessage, ReceiveMessage, RemoveCacheConnection,
@@ -28,11 +27,7 @@ impl WebSocketSession {
         ws_manager: Addr<WebSocketServer>,
     ) -> Self {
         let subscriptions = KromerWsSubList::new();
-        let address = Some(
-            address
-                .ok_or_else(|| WebSocketError::KromerAddressError)
-                .unwrap(),
-        );
+        let address = address.or_else(|| Some(KromerAddress::from_string("guest".to_string())));
         let ws_session = Some(ws_session);
         WebSocketSession {
             id,
