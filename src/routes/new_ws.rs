@@ -15,7 +15,7 @@ use crate::{
     ws::{
         actors::session::WebSocketSession,
         types::{
-            actor_message::{CloseWebSocket, GetActiveSessions, SetCacheConnection},
+            actor_message::{CloseWebSocket, GetActiveSessions, ReceiveMessage, SetCacheConnection},
             session::KromerAddress,
         },
     },
@@ -39,12 +39,11 @@ pub async fn payload_ws(
     let _session_id =
         Uuid::from_str(&token).map_err(|_| KromerError::WebSocket(WebSocketError::UuidNotFound));
 
-    let (response, mut _session, mut _msg_stream) = actix_ws::handle(&req, body)
-        .or_else(|_| Err(WebSocketError::RoomCreation))?;
+    let (response, mut _session, mut _msg_stream) =
+        actix_ws::handle(&req, body).or_else(|_| Err(WebSocketError::RoomCreation))?;
 
     let address = Some(KromerAddress::from_string("guest".to_string()));
-    let token_uuid = Uuid::from_str(&token)
-        .or_else(|_| Err(WebSocketError::UuidNotFound))?;
+    let token_uuid = Uuid::from_str(&token).or_else(|_| Err(WebSocketError::UuidNotFound))?;
 
     let wrapped_ws_session = WebSocketSession::new(
         token_uuid,
@@ -56,10 +55,14 @@ pub async fn payload_ws(
 
     let ws_actor_addr = wrapped_ws_session.start();
     let cloned_ws_actor_addr = ws_actor_addr.clone();
-    let _ = _ws_manager.send(SetCacheConnection(token_uuid, ws_actor_addr)).await;
+    let _ = _ws_manager
+        .send(SetCacheConnection(token_uuid, ws_actor_addr))
+        .await;
 
     let thread_ws_manager = _ws_manager.clone();
+    let thread_token_uuid = token_uuid.clone();
 
+    // Receive thread
     actix_web::rt::spawn(async move {
         let get_active_sessions_msg = GetActiveSessions;
         let active_sessions = thread_ws_manager.send(get_active_sessions_msg).await;
@@ -77,13 +80,17 @@ pub async fn payload_ws(
                 Message::Close(reason) => {
                     close_reason = reason.unwrap_or_else(|| close_reason);
                     tracing::debug!(
-                        "[SPAWNED_WS_THREAD] Client WS Closed with Code: {:?}, Description: {:?}",
+                        "[SPAWNED_WS_RECEIVE_THREAD] Client WS Closed with Code: {:?}, Description: {:?}",
                         close_reason.code,
                         close_reason.description
                     );
                     break;
                 }
-                Message::Text(msg) => tracing::debug!("[SPAWNED_WS_THREAD] Got text, msg: {msg}"),
+                Message::Text(msg) => {
+                    tracing::debug!("[SPAWNED_WS_RECEIVE_THREAD] Got text, msg: {msg}");
+                    let to_server_msg = ReceiveMessage(thread_token_uuid, msg.to_string());
+                    let _ = thread_ws_manager.send(to_server_msg).await;
+                }
                 _ => break,
             }
         }

@@ -8,8 +8,8 @@ use surrealdb::Uuid;
 use crate::ws::{
     actors::session::WebSocketSession,
     types::actor_message::{
-        GetActiveSessions, GetCacheConnection, ReceiveMessage, RemoveCacheConnection,
-        SetCacheConnection,
+        GetActiveSessions, GetCacheConnection, KromerMessage, ReceiveMessage,
+        RemoveCacheConnection, SetCacheConnection,
     },
 };
 
@@ -29,8 +29,22 @@ impl WebSocketServer {
         self.sessions.insert(uuid, conn_to_cache);
     }
 
-    fn send_payload_message(&mut self, id: Uuid, msg: &str) {
-        tracing::debug!("Received, ID: {id}, msg: {msg}");
+    fn receive_payload_message(&mut self, id: Uuid, msg: &str) {
+        tracing::debug!("[WS_SERVER_ACTOR] Received, ID: {id}, msg: {msg}");
+        let opt_addr = self.sessions.get(&id);
+        let opt_addr2 = opt_addr.cloned();
+        if let Some(ws_actor) = opt_addr2 {
+            let return_msg = format!("Found your UUID: {id}. Your msg was '{msg}'");
+            tracing::debug!("[WS_SERVER_ACTOR] Processing message for UUID: {id}");
+            let success_msg = KromerMessage(return_msg);
+            let future = async move {
+                let _ = ws_actor.send(success_msg).await;
+            };
+
+            actix::spawn(future);
+        } else {
+            tracing::debug!("[WS_SERVER_ACTOR] Could not find session for {id}");
+        }
     }
 }
 
@@ -48,7 +62,7 @@ impl Handler<ReceiveMessage> for WebSocketServer {
 
     fn handle(&mut self, msg: ReceiveMessage, _ctx: &mut Self::Context) {
         let ReceiveMessage(id, msg) = msg;
-        self.send_payload_message(id, &msg);
+        self.receive_payload_message(id, &msg);
     }
 }
 

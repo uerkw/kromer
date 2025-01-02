@@ -120,36 +120,3 @@ impl Handler<CloseWebSocket> for WebSocketSession {
         _ctx.stop()
     }
 }
-
-impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebSocketSession {
-    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
-        let msg = match msg {
-            Err(_) => {
-                ctx.stop();
-                return;
-            }
-            Ok(msg) => msg,
-        };
-
-        match msg {
-            ws::Message::Text(text) => {
-                let msg = text.trim();
-
-                // Handle the payload here.
-                tracing::debug!("StreamHandler, Message: {msg}")
-            }
-
-            ws::Message::Close(reason) => {
-                let unwrapped_session = self.ws_session.take().unwrap();
-                let future = async {
-                    let _ = unwrapped_session.close(reason).await;
-                };
-
-                actix::spawn(future);
-
-                ctx.stop();
-            }
-            _ => {}
-        }
-    }
-}
