@@ -4,7 +4,6 @@ use surrealdb::Uuid;
 
 use crate::errors::{websocket::WebSocketError, KromerError};
 
-
 pub fn make_url(uuid: Uuid) -> Result<String, KromerError> {
     let schema = "ws";
     let host =
@@ -13,7 +12,6 @@ pub fn make_url(uuid: Uuid) -> Result<String, KromerError> {
         env::var("PORT").map_err(|_| KromerError::WebSocket(WebSocketError::ServerConfigError))?;
 
     let server_url = format!("{host}:{port}");
-    
-    Ok(format!("{schema}://{server_url}/new_ws/gateway/{uuid}"))
 
+    Ok(format!("{schema}://{server_url}/new_ws/gateway/{uuid}"))
 }

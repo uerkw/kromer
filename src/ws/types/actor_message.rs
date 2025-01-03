@@ -2,9 +2,8 @@ use actix::prelude::*;
 use actix_ws::CloseReason;
 use surrealdb::Uuid;
 
-use crate::ws::actors::session::WebSocketSession;
-
-use super::server::TokenParams;
+use crate::ws::actors::session::WsSessionActor;
+use crate::ws::types::common::TokenParams;
 
 #[derive(Clone, Message)]
 #[rtype(result = "()")]
@@ -18,10 +17,10 @@ impl ToString for ReceiveMessage {
 
 #[derive(Message)]
 #[rtype(result = "()")]
-pub struct SetCacheConnection(pub Uuid, pub Addr<WebSocketSession>);
+pub struct SetCacheConnection(pub Uuid, pub Addr<WsSessionActor>);
 
 #[derive(Message)]
-#[rtype(result = "Option<Addr<WebSocketSession>>")]
+#[rtype(result = "Option<Addr<WsSessionActor>>")]
 pub struct GetCacheConnection(pub Uuid);
 
 #[derive(Message)]
@@ -33,7 +32,7 @@ pub struct RemoveCacheConnection(pub Uuid);
 pub struct GetActiveSessions;
 
 #[derive(Message)]
-#[rtype(result = "bool")]
+#[rtype(result = "(bool, String)")]
 pub struct CheckTokenExists(pub Uuid);
 
 #[derive(Message)]

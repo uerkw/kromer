@@ -1,10 +1,11 @@
 use std::env;
+use std::sync::Arc;
 
 use actix::Actor;
 use actix_web::{middleware, web, App, HttpServer};
 
 use kromer::websockets::server::WebSocketServer;
-use kromer::ws::actors::server::WebSocketServer as NewWebSocketServer;
+use kromer::ws::actors::server::WsServerActor as NewWebSocketServer;
 use surrealdb::opt::auth::Root;
 
 use kromer::database::db::{ConnectionOptions, Database};
@@ -42,12 +43,16 @@ async fn main() -> Result<(), KromerError> {
 
     let db = Database::connect(&surreal_endpoint, &connect_options).await?;
 
+    let db_arc = Arc::new(db);
+
     let ws_manager = WebSocketServer::new().start();
 
-    let new_ws_manager = NewWebSocketServer::new().start();
+    let ws_db_arc = db_arc.clone();
+    let new_ws_manager = NewWebSocketServer::new(ws_db_arc).start();
 
+    let state_db_arc = db_arc.clone();
     let state = AppState {
-        db,
+        db: state_db_arc,
         ws_manager,
         new_ws_manager,
     };

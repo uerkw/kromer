@@ -25,6 +25,9 @@ pub enum WebSocketError {
 
     #[error("Error parsing Kromer Address")]
     KromerAddressError,
+
+    #[error("Conversion error, value must be a number or a string")]
+    IdConversionError,
 }
 
 impl From<WebSocketError> for ActixError {
