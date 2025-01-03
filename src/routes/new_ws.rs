@@ -8,6 +8,7 @@ use actix_web::{
 use actix_ws::{CloseCode, CloseReason, Message};
 use serde_json::json;
 use surrealdb::Uuid;
+use tokio::time::{sleep, Duration};
 
 use crate::{
     database::models::wallet::Model as Wallet, errors::{wallet::WalletError, websocket::WebSocketError, KromerError}, ws::{
@@ -59,8 +60,12 @@ pub async fn start_ws(
     // Send it over the manager actor
     let _ = ws_manager.send(add_token_request).await;
 
-    // TODO: We also need to spawn a thread for deleting this session...
-
+    // We also need to spawn a thread for deleting this session...
+    actix_web::rt::spawn( async move {
+        sleep(Duration::from_secs(10)).await;
+        
+        let _ = ws_manager.send(RemoveToken(new_uuid)).await;
+    });
 
     // Finally, construct a url for the user
     let return_url = utils::make_url::make_url(new_uuid)?;
@@ -152,14 +157,14 @@ pub async fn payload_ws(
                 Message::Close(reason) => {
                     close_reason = reason.unwrap_or_else(|| close_reason);
                     tracing::debug!(
-                        "[SPAWNED_WS_RECEIVE_THREAD] Client WS Closed with Code: {:?}, Description: {:?}",
+                        "[SPAWNED_WS_THREAD][RECEIVE] Client WS Closed with Code: {:?}, Description: {:?}",
                         close_reason.code,
                         close_reason.description
                     );
                     break;
                 }
                 Message::Text(msg) => {
-                    tracing::debug!("[SPAWNED_WS_RECEIVE_THREAD] Got text, msg: {msg}");
+                    tracing::debug!("[SPAWNED_WS_THREAD][RECEIVE] Got text, msg: {msg}");
                     let to_server_msg = ReceiveMessage(thread_token_uuid, msg.to_string());
                     let _ = thread_ws_manager.send(to_server_msg).await;
                 }
