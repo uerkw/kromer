@@ -160,9 +160,13 @@ impl Handler<RemoveToken> for WebSocketServer {
 
     fn handle(&mut self, msg: RemoveToken, _ctx: &mut Self::Context) -> Self::Result {
         let RemoveToken(uuid) = msg;
-
-        self.remove_token(uuid);
-        tracing::debug!("[WS_SERVER_ACTOR] Removed token for UUID: {}", uuid.to_string());
+        // check if it exists, just so we don't have any weird behavior...
+        if self.check_token_exists(uuid) {
+            self.remove_token(uuid);
+            tracing::debug!("[WS_SERVER_ACTOR] Removed token for UUID: {}", uuid.to_string());
+        } else {
+            tracing::debug!("[WS_SERVER_ACTOR] Token was already removed (30s lifetime), ignoring: {}", uuid.to_string());
+        }
     }
 }
 

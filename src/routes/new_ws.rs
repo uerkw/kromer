@@ -102,7 +102,7 @@ pub async fn payload_ws(
             }
         }
         Err(_) => {
-            KromerError::WebSocket(WebSocketError::UuidNotFound);
+            return Err(KromerError::WebSocket(WebSocketError::UuidNotFound));
         }
     }
 
