@@ -4,9 +4,7 @@ use surrealdb::Uuid;
 
 use crate::ws::actors::session::WebSocketSession;
 
-#[derive(Clone, Message)]
-#[rtype(result = "()")]
-pub struct KromerMessage(pub String);
+use super::server::TokenParams;
 
 #[derive(Clone, Message)]
 #[rtype(result = "()")]
@@ -35,5 +33,22 @@ pub struct RemoveCacheConnection(pub Uuid);
 pub struct GetActiveSessions;
 
 #[derive(Message)]
+#[rtype(result = "bool")]
+pub struct CheckTokenExists(pub Uuid);
+
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct AddToken(pub Uuid, pub TokenParams);
+
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct RemoveToken(pub Uuid);
+
+// WebSocketSessionActor
+#[derive(Message)]
 #[rtype(result = "()")]
 pub struct CloseWebSocket(pub CloseReason);
+
+#[derive(Clone, Message)]
+#[rtype(result = "()")]
+pub struct KromerMessage(pub String);

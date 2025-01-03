@@ -5,24 +5,40 @@ use actix::{Actor, Context, Handler, MessageResult};
 use actix_broker::BrokerSubscribe;
 use surrealdb::Uuid;
 
+use crate::ws::types::actor_message::{AddToken, CheckTokenExists, RemoveToken};
 use crate::ws::{
     actors::session::WebSocketSession,
     types::actor_message::{
         GetActiveSessions, GetCacheConnection, KromerMessage, ReceiveMessage,
         RemoveCacheConnection, SetCacheConnection,
     },
+    types::server::TokenParams
 };
 
 #[derive(Default)]
 pub struct WebSocketServer {
+    tokens: HashMap<Uuid, TokenParams>,
     sessions: HashMap<Uuid, Addr<WebSocketSession>>,
 }
 
 impl WebSocketServer {
     pub fn new() -> Self {
         WebSocketServer {
+            tokens: HashMap::new(),
             sessions: HashMap::new(),
         }
+    }
+
+    pub fn add_new_token(&mut self, uuid: Uuid, params: TokenParams) {
+        self.tokens.insert(uuid, params);
+    }
+
+    pub fn remove_token(&mut self, uuid: Uuid) {
+        self.tokens.remove(&uuid);
+    }
+
+    pub fn check_token_exists(&mut self, uuid: Uuid) -> bool {
+        self.tokens.contains_key(&uuid)
     }
 
     pub fn add_client_to_sessions(&mut self, uuid: Uuid, conn_to_cache: Addr<WebSocketSession>) {
@@ -104,6 +120,38 @@ impl Handler<GetActiveSessions> for WebSocketServer {
 
     fn handle(&mut self, _: GetActiveSessions, _ctx: &mut Self::Context) -> Self::Result {
         MessageResult(self.sessions.keys().cloned().collect())
+    }
+}
+
+impl Handler<CheckTokenExists> for WebSocketServer {
+    type Result = bool;
+
+    fn handle(&mut self, msg: CheckTokenExists, _ctx: &mut Self::Context) -> Self::Result {
+        let CheckTokenExists(id) = msg;
+
+        let result = self.check_token_exists(id);
+
+        result
+    }
+}
+
+impl Handler<AddToken> for WebSocketServer {
+    type Result = ();
+
+    fn handle(&mut self, msg: AddToken, _ctx: &mut Self::Context) -> Self::Result {
+        let AddToken(uuid, params) = msg;
+
+        self.add_new_token(uuid, params);
+    }
+}
+
+impl Handler<RemoveToken> for WebSocketServer {
+    type Result = ();
+
+    fn handle(&mut self, msg: RemoveToken, _ctx: &mut Self::Context) -> Self::Result {
+        let RemoveToken(uuid) = msg;
+
+        self.remove_token(uuid);
     }
 }
 

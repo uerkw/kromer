@@ -7,3 +7,10 @@
 // type Client = Recipient<KromerMessage>;
 
 // type CachedWeVbSocket = Addr<WebSocketSession>;
+
+use super::session::KromerAddress;
+
+pub struct TokenParams {
+    pub address: KromerAddress,
+    pub privatekey: String
+}

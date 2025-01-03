@@ -40,7 +40,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     );
     cfg.service(
         web::scope("/new_ws")
-            //.service(new_ws::request_token)
+            .service(new_ws::start_ws)
             .service(new_ws::payload_ws),
     );
     cfg.service(web::scope("").service(index::index_get));
