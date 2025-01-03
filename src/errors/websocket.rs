@@ -13,11 +13,15 @@ pub enum WebSocketError {
     #[error("Failed to create a WebSocket room")]
     RoomCreation,
 
+    // Shouldn't really ever happen in production...
     #[error("Server configuration issue, contact an admin")]
     ServerConfigError,
 
     #[error("UUID was not found in server cache")]
     UuidNotFound,
+
+    #[error("An invalid WebSocket Token was supplied")]
+    InvalidUuid,
 
     #[error("Error parsing Kromer Address")]
     KromerAddressError,

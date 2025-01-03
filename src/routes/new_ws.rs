@@ -120,7 +120,7 @@ pub async fn payload_ws(
         actix_ws::handle(&req, body).or_else(|_| Err(WebSocketError::RoomCreation))?;
 
     let address = Some(KromerAddress::from_string("guest".to_string()));
-    let token_uuid = Uuid::from_str(&token).or_else(|_| Err(KromerError::WebSocket(WebSocketError::UuidNotFound)))?;
+    let token_uuid = Uuid::from_str(&token).or_else(|_| Err(KromerError::WebSocket(WebSocketError::InvalidUuid)))?;
 
     let wrapped_ws_session = WebSocketSession::new(
         token_uuid,
@@ -141,6 +141,7 @@ pub async fn payload_ws(
 
     // Receive thread
     actix_web::rt::spawn(async move {
+        // This here is debug related, and doesn't necessarily have to make it into the final impl
         let get_active_sessions_msg = GetActiveSessions;
         let active_sessions = thread_ws_manager.send(get_active_sessions_msg).await;
         tracing::debug!(

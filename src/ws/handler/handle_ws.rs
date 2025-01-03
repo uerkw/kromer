@@ -19,7 +19,6 @@ fn parse_json_string(msg: String ) -> Result<Value, SerdeJsonError> {
 }
 
 pub fn handle_ws_msg(msg: String) -> Result<Value, KromerError> {
-    //let json_msg = parse_json_string(msg);
 
     let json_msg = match parse_json_string(msg) {
         Ok(message) => message,
