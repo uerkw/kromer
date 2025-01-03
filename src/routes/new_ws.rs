@@ -62,7 +62,7 @@ pub async fn start_ws(
 
     // We also need to spawn a thread for deleting this session...
     actix_web::rt::spawn( async move {
-        sleep(Duration::from_secs(10)).await;
+        sleep(Duration::from_secs(30)).await;
         
         let _ = ws_manager.send(RemoveToken(new_uuid)).await;
     });
@@ -164,7 +164,7 @@ pub async fn payload_ws(
                     break;
                 }
                 Message::Text(msg) => {
-                    tracing::debug!("[SPAWNED_WS_THREAD][RECEIVE] Got text, msg: {msg}");
+                    tracing::debug!("[SPAWNED_WS_THREAD] Received text, message: {msg}");
                     let to_server_msg = ReceiveMessage(thread_token_uuid, msg.to_string());
                     let _ = thread_ws_manager.send(to_server_msg).await;
                 }
@@ -180,7 +180,7 @@ pub async fn payload_ws(
     let get_active_sessions_msg = GetActiveSessions;
     let active_sessions = cleanup_ws_manager.send(get_active_sessions_msg).await;
     tracing::debug!(
-        "[SPAWNED_WS_THREAD] Active Sessions Before Open: {:?}",
+        "[SPAWNED_WS_THREAD] Active Sessions On Open: {:?}",
         active_sessions
     );
     Ok(response)

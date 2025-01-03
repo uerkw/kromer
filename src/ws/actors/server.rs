@@ -5,6 +5,7 @@ use actix::{Actor, Context, Handler, MessageResult};
 use actix_broker::BrokerSubscribe;
 use surrealdb::Uuid;
 
+use crate::ws::handler::handle_ws;
 use crate::ws::types::actor_message::{AddToken, CheckTokenExists, RemoveToken};
 use crate::ws::{
     actors::session::WebSocketSession,
@@ -45,14 +46,21 @@ impl WebSocketServer {
         self.sessions.insert(uuid, conn_to_cache);
     }
 
+    // TODO: Move this handler over to WsSessionActor, no real need for it to be in this file
+    // I'll also have to change the logic in the route to point to the Addr for the Session to send actor messages
+
     fn receive_payload_message(&mut self, id: Uuid, msg: &str) {
-        tracing::debug!("[WS_SERVER_ACTOR] Received, ID: {id}, msg: {msg}");
+        tracing::debug!("[WS_SERVER_ACTOR] Received, Processing, UUID: {id}, msg: {msg}");
         let opt_addr = self.sessions.get(&id);
         let opt_addr2 = opt_addr.cloned();
         if let Some(ws_actor) = opt_addr2 {
-            let return_msg = format!("Found your UUID: {id}. Your msg was '{msg}'");
-            tracing::debug!("[WS_SERVER_ACTOR] Processing message for UUID: {id}");
-            let success_msg = KromerMessage(return_msg);
+            // Perform handling here
+            let default_msg = serde_json::json!({"error":"Could not parse JSON message"});
+            let default_msg_2 = default_msg.clone();
+            let parsed_msg = handle_ws::handle_ws_msg(msg.to_string()).unwrap_or(default_msg);
+            tracing::debug!("[WS_SERVER_ACTOR] Parsed WS MSG as: {:?}", parsed_msg);
+            //
+            let success_msg = KromerMessage(serde_json::to_string(&parsed_msg).unwrap_or(default_msg_2.to_string()));
             let future = async move {
                 let _ = ws_actor.send(success_msg).await;
             };
@@ -109,7 +117,7 @@ impl Handler<RemoveCacheConnection> for WebSocketServer {
 
     fn handle(&mut self, msg: RemoveCacheConnection, _ctx: &mut Self::Context) -> Self::Result {
         let RemoveCacheConnection(uuid) = msg;
-        tracing::debug!("[WS_SERVER_ACTOR] Message recevied to remove UUID from cache: {uuid}");
+        tracing::debug!("[WS_SERVER_ACTOR] Message received to remove UUID from cache: {uuid}");
 
         self.sessions.remove(&uuid);
     }
@@ -127,10 +135,11 @@ impl Handler<CheckTokenExists> for WebSocketServer {
     type Result = bool;
 
     fn handle(&mut self, msg: CheckTokenExists, _ctx: &mut Self::Context) -> Self::Result {
-        let CheckTokenExists(id) = msg;
+        let CheckTokenExists(uuid) = msg;
 
-        let result = self.check_token_exists(id);
+        let result = self.check_token_exists(uuid);
 
+        tracing::debug!("[WS_SERVER_ACTOR] Checked token for UUID: {}", uuid.to_string());
         result
     }
 }
@@ -142,6 +151,7 @@ impl Handler<AddToken> for WebSocketServer {
         let AddToken(uuid, params) = msg;
 
         self.add_new_token(uuid, params);
+        tracing::debug!("[WS_SERVER_ACTOR] Added token for UUID: {}", uuid.to_string());
     }
 }
 
@@ -152,6 +162,7 @@ impl Handler<RemoveToken> for WebSocketServer {
         let RemoveToken(uuid) = msg;
 
         self.remove_token(uuid);
+        tracing::debug!("[WS_SERVER_ACTOR] Removed token for UUID: {}", uuid.to_string());
     }
 }
 
