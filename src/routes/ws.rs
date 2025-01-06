@@ -127,9 +127,9 @@ pub async fn gateway(
         return send_error_message(req.clone(), body).await;
     }
 
-    let mut token_cache = token_cache_mutex.lock().unwrap();
     tracing::info!("Token {uuid} was valid");
     token_cache.remove_token(uuid);
+    drop(token_cache);
 
     let ws_server_handle = state.ws_server_handle.clone();
     let (response, session, msg_stream) =
