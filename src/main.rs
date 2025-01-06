@@ -1,15 +1,17 @@
 use std::env;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use actix::Actor;
 use actix_web::{middleware, web, App, HttpServer};
 
-use kromer::websockets::server::WebSocketServer;
+use kromer::websockets::token_cache::TokenCache;
+use kromer::websockets::ws_server::WsServer;
 use kromer::ws::actors::server::WsServerActor as NewWebSocketServer;
 use surrealdb::opt::auth::Root;
 
 use kromer::database::db::{ConnectionOptions, Database};
 use kromer::{errors::KromerError, routes, AppState};
+use tokio::{spawn, try_join};
 
 #[actix_web::main]
 async fn main() -> Result<(), KromerError> {
@@ -45,19 +47,21 @@ async fn main() -> Result<(), KromerError> {
 
     let db_arc = Arc::new(db);
 
-    let ws_manager = WebSocketServer::new().start();
-
     let ws_db_arc = db_arc.clone();
-    let new_ws_manager = NewWebSocketServer::new(ws_db_arc).start();
+    let old_ws_manager = NewWebSocketServer::new(ws_db_arc).start();
 
-    let state_db_arc = db_arc.clone();
-    let state = AppState {
-        db: state_db_arc,
-        ws_manager,
-        new_ws_manager,
-    };
+    let (ws_server, ws_server_handle) = WsServer::new();
+    let ws_server = spawn(ws_server.run());
+    let token_cache = Arc::new(Mutex::new(TokenCache::new()));
 
-    HttpServer::new(move || {
+    let state = web::Data::new(AppState {
+        db: db_arc,
+        old_ws_manager,
+        ws_server_handle,
+        token_cache,
+    });
+
+    let http_server = HttpServer::new(move || {
         App::new()
             .app_data(
                 web::FormConfig::default()
@@ -75,15 +79,17 @@ async fn main() -> Result<(), KromerError> {
                 web::JsonConfig::default()
                     .error_handler(|err, _req| KromerError::Validation(err.to_string()).into()),
             )
-            .app_data(web::Data::new(state.clone()))
+            .app_data(state.clone())
             .wrap(middleware::Logger::default())
             .wrap(middleware::NormalizePath::trim())
             .configure(kromer::routes::config)
             .default_service(web::route().to(routes::not_found::not_found))
     })
     .bind(&server_url)?
-    .run()
-    .await?;
+    .run();
+
+    // Join the tasks together using tokio.
+    try_join!(http_server, async move { ws_server.await.unwrap() })?;
 
     Ok(())
 }

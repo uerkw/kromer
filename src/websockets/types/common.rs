@@ -1,26 +1,26 @@
 use std::{fmt, str::FromStr};
 
-#[derive(Default, Clone)]
-pub struct TokenParams {
+#[derive(Debug, Clone)]
+pub struct WebSocketTokenData {
     pub address: String,
-    pub privatekey: String,
+    pub privatekey: Option<String>,
 }
 
-#[derive(Default, Clone)]
-pub struct KromerWsSubList {
+#[derive(Default, Debug, Clone)]
+pub struct WebSocketSubscriptionList {
     _subscriptions: Vec<WebSocketSubscriptionType>,
 }
 
-impl KromerWsSubList {
+impl WebSocketSubscriptionList {
     pub fn new() -> Self {
-        KromerWsSubList {
+        WebSocketSubscriptionList {
             _subscriptions: vec![WebSocketSubscriptionType::from_str("ownTransactions").unwrap()],
         }
     }
 }
 
-#[derive(Clone)]
-enum WebSocketSubscriptionType {
+#[derive(Clone, Debug)]
+pub enum WebSocketSubscriptionType {
     Transactions,
     OwnTransactions,
     Names,
@@ -53,4 +53,17 @@ impl fmt::Display for WebSocketSubscriptionType {
             WebSocketSubscriptionType::Motd => write!(f, "motd"),
         }
     }
+}
+
+#[derive(Clone, Debug)]
+pub enum WebSocketMessageType {
+    Address,
+    Login,
+    Logout,
+    Me,
+    Subscribe,
+    GetSubscriptionLevel,
+    GetValidSubscriptionLevels,
+    Unsubscribe,
+    MakeTransaction,
 }

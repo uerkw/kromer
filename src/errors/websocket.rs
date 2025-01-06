@@ -13,6 +13,21 @@ pub enum WebSocketError {
     #[error("Failed to create a WebSocket room")]
     RoomCreation,
 
+    #[error("Failed to create a WebSocket handshake")]
+    HandshakeError,
+
+    #[error("Failed to send a WebSocket message")]
+    MessageSend,
+
+    #[error("Failed to disconnect a WebSocket")]
+    Disconnect,
+
+    #[error("Failed to list sessions")]
+    ListSessions,
+
+    #[error("WebSocket Closed")]
+    WebSocketClosed,
+
     // Shouldn't really ever happen in production...
     #[error("Server configuration issue, contact an admin")]
     ServerConfigError,

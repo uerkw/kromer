@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use actix::prelude::*;
 use actix_ws::CloseReason;
 use surrealdb::Uuid;
@@ -9,9 +11,9 @@ use crate::ws::types::common::TokenParams;
 #[rtype(result = "()")]
 pub struct ReceiveMessage(pub Uuid, pub String);
 
-impl ToString for ReceiveMessage {
-    fn to_string(&self) -> String {
-        self.1.to_string()
+impl Display for ReceiveMessage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.1)
     }
 }
 

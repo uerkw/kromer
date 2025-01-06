@@ -31,7 +31,6 @@ impl WsSessionActor {
         db_arc: Arc<Surreal<SurrealAny>>,
     ) -> Self {
         let subscriptions = KromerWsSubList::new();
-        let address = address;
         let ws_session = Some(ws_session);
         WsSessionActor {
             id,
@@ -119,7 +118,7 @@ impl Handler<CloseWebSocket> for WsSessionActor {
             cloned_close_reason.description.unwrap_or_default()
         );
 
-        let uuid_to_remove = self.id.clone();
+        let uuid_to_remove = self.id;
         let thread_ws_manager = self.ws_manager.clone();
         let future = async move {
             let remove_from_cache_msg = RemoveCacheConnection(uuid_to_remove);
@@ -148,16 +147,14 @@ impl Handler<WsMeHandle> for WsSessionActor {
 
         let kromer_address = self._address.clone();
         let kromer_address_1 = kromer_address.clone();
-        if !(kromer_address == "guest") {
+        if kromer_address != "guest" {
             if let Some(_session) = self.ws_session.take() {
                 let future = async move {
-                    let _wallet_addr_info =
-                        crate::database::models::wallet::Model::get_by_address_excl(
-                            &db_arc,
-                            kromer_address_1,
-                        )
-                        .await;
-                    _wallet_addr_info
+                    crate::database::models::wallet::Model::get_by_address_excl(
+                        &db_arc,
+                        kromer_address_1,
+                    )
+                    .await
                 }
                 .into_actor(self)
                 .map(|result, _actor, _ctx| match result {

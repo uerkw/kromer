@@ -36,7 +36,7 @@ pub async fn start_ws(
     details: Option<web::Json<WsConnDetails>>,
 ) -> Result<HttpResponse, KromerError> {
     let db = &state.db;
-    let ws_manager = (&state.new_ws_manager).clone();
+    let ws_manager = state.old_ws_manager.clone();
 
     let ws_privatekey = details
         .map(|json_details| json_details.privatekey.clone())
@@ -49,14 +49,14 @@ pub async fn start_ws(
         .map_err(KromerError::Database)?
         .ok_or_else(|| KromerError::Wallet(WalletError::InvalidPassword))?;
 
-    let address = Some(wallet.address);
+    let address = wallet.address;
 
     let new_uuid = Uuid::new_v4();
 
     // Construct a message to the WebSocketManagerActor to add the uuid.
     // Construct the token parameters
     let token_params = TokenParams {
-        address: address.unwrap_or_else(|| "guest".to_string()),
+        address,
         privatekey: ws_privatekey_2,
     };
     // Construct the actual message
@@ -92,7 +92,7 @@ pub async fn payload_ws(
     token: web::Path<String>,
 ) -> Result<impl Responder, KromerError> {
     let token = token.into_inner();
-    let _ws_manager = (&state.new_ws_manager).clone();
+    let _ws_manager = &state.old_ws_manager.clone();
     let _session_id =
         Uuid::from_str(&token).map_err(|_| KromerError::WebSocket(WebSocketError::UuidNotFound));
 
@@ -127,10 +127,10 @@ pub async fn payload_ws(
     let _ = _ws_manager.send(token_remove_request).await;
 
     let (response, mut _session, mut _msg_stream) =
-        actix_ws::handle(&req, body).or_else(|_| Err(WebSocketError::RoomCreation))?;
+        actix_ws::handle(&req, body).map_err(|_| WebSocketError::RoomCreation)?;
 
-    let token_uuid = Uuid::from_str(&token)
-        .or_else(|_| Err(KromerError::WebSocket(WebSocketError::InvalidUuid)))?;
+    let token_uuid =
+        Uuid::from_str(&token).map_err(|_| KromerError::WebSocket(WebSocketError::InvalidUuid))?;
 
     let db_arc = state.db.clone();
     let wrapped_ws_session = WsSessionActor::new(
@@ -149,7 +149,7 @@ pub async fn payload_ws(
         .await;
 
     let thread_ws_manager = _ws_manager.clone();
-    let thread_token_uuid = token_uuid.clone();
+    let thread_token_uuid = token_uuid;
 
     // Receive thread
     actix_web::rt::spawn(async move {
@@ -167,7 +167,7 @@ pub async fn payload_ws(
         while let Some(Ok(msg)) = _msg_stream.recv().await {
             match msg {
                 Message::Close(reason) => {
-                    close_reason = reason.unwrap_or_else(|| close_reason);
+                    close_reason = reason.unwrap_or(close_reason);
                     tracing::debug!(
                         "Client WS Closed with Code: {:?}, Description: {:?}",
                         close_reason.code,

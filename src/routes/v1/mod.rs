@@ -6,7 +6,7 @@ use actix_web::{get, web, HttpResponse};
 
 use crate::errors::KromerError;
 
-static VERSION: &'static str = env!("CARGO_PKG_VERSION");
+static VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct LoginDetail {

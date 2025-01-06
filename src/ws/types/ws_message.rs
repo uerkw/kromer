@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 fn _get_ws_handlers() -> HashMap<&'static str, &'static str> {
-    let websocket_handlers = HashMap::from([
+    HashMap::from([
         ("address", "wsGetAddress"),
         ("make_transaction", "wsMakeTransaction"),
         ("me", "wsGetMe"),
@@ -14,7 +14,5 @@ fn _get_ws_handlers() -> HashMap<&'static str, &'static str> {
         ),
         ("login", "wsLogin"),
         ("logout", "wsLogout"),
-    ]);
-
-    return websocket_handlers;
+    ])
 }

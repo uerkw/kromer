@@ -2,12 +2,10 @@ use actix_web::web;
 
 use crate::guards;
 
-use crate::websockets::payload_ws;
-
 pub mod index;
 pub mod internal;
-pub mod new_ws;
 pub mod not_found;
+pub mod old_ws;
 pub mod v1;
 pub mod ws;
 
@@ -34,14 +32,10 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .configure(internal::config),
     );
     cfg.service(
-        web::scope("/ws")
-            .service(ws::request_token)
-            .service(web::resource("/gateway/{token}").to(payload_ws)),
+        web::scope("/actor_ws")
+            .service(old_ws::start_ws)
+            .service(old_ws::payload_ws),
     );
-    cfg.service(
-        web::scope("/new_ws")
-            .service(new_ws::start_ws)
-            .service(new_ws::payload_ws),
-    );
+    cfg.service(web::scope("/ws").configure(ws::config));
     cfg.service(web::scope("").service(index::index_get));
 }

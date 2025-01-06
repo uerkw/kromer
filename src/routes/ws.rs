@@ -1,98 +1,158 @@
-use actix_web::{post, web, HttpResponse};
+use std::str::FromStr;
+
+//use actix::prelude::*;
+use actix_web::{get, post, HttpRequest, Responder};
+use actix_web::{
+    web::{self, Data},
+    HttpResponse,
+};
 use serde_json::json;
 use surrealdb::Uuid;
+use tokio::task::spawn_local;
+use tokio::time::sleep;
 
-use std::env;
-
-use crate::{
-    database::models::wallet::Model as Wallet,
-    errors::{wallet::WalletError, websocket::WebSocketError, KromerError},
-    websockets::{
-        message::{CreateRoom, SetCacheConnection},
-        session::KromerWsSession,
-    },
-    AppState,
-};
+use crate::database::models::wallet::Model as Wallet;
+use crate::errors::wallet::WalletError;
+use crate::errors::websocket::WebSocketError;
+use crate::websockets::handler::handle_ws;
+use crate::websockets::types::common::WebSocketTokenData;
+use crate::websockets::utils;
+//use crate::websockets::ws_manager;
+use crate::{errors::KromerError, AppState};
 
 #[derive(serde::Deserialize)]
-pub struct WebSocketInitData {
-    privatekey: Option<String>,
-    name: Option<String>,
+struct WsConnDetails {
+    privatekey: String,
 }
 
 #[post("/start")]
-async fn request_token(
-    state: web::Data<AppState>,
-    details: web::Json<WebSocketInitData>,
+pub async fn setup_ws(
+    _req: HttpRequest,
+    state: Data<AppState>,
+    details: Option<web::Json<WsConnDetails>>,
+    _stream: web::Payload,
 ) -> Result<HttpResponse, KromerError> {
-    // Grab our app state
+    let tracing_span = tracing::span!(tracing::Level::DEBUG, "setup_ws_route");
+    let _tracing_enter = tracing_span.enter();
+
     let db = &state.db;
-    let ws_manager = (&state.ws_manager).clone();
+    let token_cache_mutex = state.token_cache.clone();
 
-    let ws_privatekey = &details.privatekey;
-    let ws_name = &details.name;
+    let ws_privatekey = details.map(|json_details| json_details.privatekey.clone());
 
-    let create_room_request = CreateRoom(Some("test".to_string()));
-    let room_name_result = ws_manager.send(create_room_request).await;
+    let mut address = "guest".to_string();
 
-    let room_name_msg: String;
+    let ws_privatekey2 = ws_privatekey.clone();
 
-    match room_name_result {
-        Ok(room_name) => {
-            room_name_msg = room_name;
-        }
-        Err(mailbox_error) => {
-            tracing::error!("Error creating room: {:?}", mailbox_error);
-            return Err(KromerError::WebSocket(WebSocketError::RoomCreation));
-        }
-    }
-
-    let new_uuid = Uuid::new_v4();
-    let schema = "ws";
-    let host =
-        env::var("HOST").map_err(|_| KromerError::WebSocket(WebSocketError::ServerConfigError))?;
-    let port =
-        env::var("PORT").map_err(|_| KromerError::WebSocket(WebSocketError::ServerConfigError))?;
-
-    let server_url = format!("{host}:{port}");
-    let full_url = format!("{schema}://{server_url}/ws/gateway/{new_uuid}");
-    let mut address = Some(String::from("guest"));
-
-    if let Some(privatekey) = ws_privatekey {
-        // Verify the wallet address
-        let wallet = Wallet::verify(db, privatekey.to_string())
+    if let Some(check_key) = ws_privatekey {
+        // This should error back in the request if the wallet key is invalid.
+        let wallet = Wallet::verify(db, check_key)
             .await
             .map_err(KromerError::Database)?
             .ok_or_else(|| KromerError::Wallet(WalletError::InvalidPassword))?;
 
-        address = Some(wallet.address);
+        address = wallet.address;
     }
 
-    println!("New UUID was: {new_uuid}");
+    let uuid = Uuid::new_v4();
 
-    let session = KromerWsSession::new(
-        new_uuid,
-        room_name_msg,
-        ws_manager.clone(),
-        address.clone(),
-        ws_privatekey.clone(),
-        ws_name.clone(),
-    );
-    // Construct the message and send it to be cached
-    let conn_to_cache = session;
-    let conn_cache_request = SetCacheConnection(new_uuid, conn_to_cache);
-    let msg_result = ws_manager.send(conn_cache_request).await;
+    let token_params = WebSocketTokenData {
+        address,
+        privatekey: ws_privatekey2,
+    };
 
-    match msg_result {
-        Ok(response) => {
-            tracing::debug!("Successfully sent message to actor: {:?}", response);
+    let mut token_cache = token_cache_mutex.lock().unwrap();
+    token_cache.add_token(uuid, token_params);
+
+    let token_cache2 = token_cache_mutex.clone();
+    // Spawn a green thread that will handle token cleanup.
+    let uuid2 = uuid;
+    tokio::spawn(async move {
+        let tracing_span = tracing::span!(tracing::Level::DEBUG, "spawned_token_cleanup");
+        let _tracing_enter = tracing_span.enter();
+        sleep(std::time::Duration::from_secs(30)).await;
+        let mut token_cache = token_cache2.lock().unwrap();
+
+        if token_cache.check_token(uuid) {
+            tracing::info!("Token expired (30 secs)");
+            token_cache.remove_token(uuid2);
         }
-        Err(mailbox_error) => {
-            tracing::error!("Failed to send message to actor: {:?}", mailbox_error);
-        }
-    }
+    });
+
+    let url = match utils::make_url::make_url(uuid) {
+        Ok(value) => value,
+        Err(e) => return Err(e),
+    };
 
     Ok(HttpResponse::Ok().json(json!({
-        "url": full_url,
+        "ok": true,
+        "url": url,
+        "expires": 30
     })))
+}
+
+#[get("/gateway/{token}")]
+#[allow(clippy::await_holding_lock)] 
+pub async fn gateway(
+    req: HttpRequest,
+    body: web::Payload,
+    state: Data<AppState>,
+    token: web::Path<String>,
+) -> Result<impl Responder, KromerError> {
+    let debug_span = tracing::span!(tracing::Level::INFO, "ws_gateway_route");
+    let _tracing_debug_enter = debug_span.enter();
+
+    let token_as_string = token.into_inner();
+    tracing::info!("Request with token string: {token_as_string}");
+
+    let uuid_result = Uuid::from_str(&token_as_string)
+        .map_err(|_| KromerError::WebSocket(WebSocketError::InvalidUuid));
+
+    // This is a one off message, and we don't want to actually open the server handling
+    if uuid_result.is_err() {
+        tracing::info!("Token {token_as_string} was not convertible into UUID");
+        return send_error_message(req.clone(), body).await;
+    }
+
+    let uuid = uuid_result.unwrap_or_default();
+        
+
+    let token_cache_mutex = state.token_cache.clone();
+    let mut token_cache = token_cache_mutex.lock().unwrap();
+
+    // Check token, send a one off message if it's not okay, and don't open WS server handling
+    if !token_cache.check_token(uuid) {
+        drop(token_cache);
+        tracing::info!("Token {uuid} was not found in cache");
+        return send_error_message(req.clone(), body).await;
+    }
+
+    let mut token_cache = token_cache_mutex.lock().unwrap();
+    tracing::info!("Token {uuid} was valid");
+    token_cache.remove_token(uuid);
+
+    let ws_server_handle = state.ws_server_handle.clone();
+    let (response, session, msg_stream) =
+        actix_ws::handle(&req, body).map_err(|_| WebSocketError::HandshakeError)?;
+
+    spawn_local(handle_ws(ws_server_handle, session, msg_stream));
+
+    Ok(response)
+}
+
+async fn send_error_message(req: HttpRequest, body: web::Payload) -> Result<HttpResponse, KromerError>  {
+
+    let (response, mut session, _msg_stream) =
+        actix_ws::handle(&req, body).map_err(|_| WebSocketError::HandshakeError)?;
+
+    let error_msg = json!({"ok": false, "error": "invalid_websocket_token", "message": "Invalid websocket token", "type": "error"});
+
+    let _result = session.text(error_msg.to_string()).await;
+
+    Ok(response)
+}
+
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(setup_ws);
+    cfg.service(gateway);
 }
