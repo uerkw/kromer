@@ -197,7 +197,7 @@ async fn process_text_msg(
 
     match msg_type {
         WebSocketMessageType::Address => {
-            let target_address = msg_as_json["address"].to_string();
+            let target_address = msg_as_json["address"].as_str();
             let response = json!({"id": _msg_id, "ok": "true", "address": target_address});
             let _ = session.text(response.to_string()).await;
         }
