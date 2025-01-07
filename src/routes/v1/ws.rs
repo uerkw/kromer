@@ -17,6 +17,7 @@ use crate::errors::websocket::WebSocketError;
 use crate::websockets::handler::handle_ws;
 use crate::websockets::types::common::WebSocketTokenData;
 use crate::websockets::utils;
+use crate::websockets::wrapped_ws::WrappedWsData;
 use crate::{errors::KromerError, AppState};
 
 #[derive(serde::Deserialize)]
@@ -38,9 +39,7 @@ pub async fn setup_ws(
     let token_cache_mutex = state.token_cache.clone();
 
     let ws_privatekey = details.map(|json_details| json_details.privatekey.clone());
-
     let mut address = "guest".to_string();
-
     let ws_privatekey2 = ws_privatekey.clone();
 
     if let Some(check_key) = ws_privatekey {
@@ -54,7 +53,6 @@ pub async fn setup_ws(
     }
 
     let uuid = Uuid::new_v4();
-
     let token_params = WebSocketTokenData {
         address,
         privatekey: ws_privatekey2,
@@ -117,7 +115,6 @@ pub async fn gateway(
     // Unwrap should be fine, we checked already if there was an error
     let uuid = uuid_result.unwrap_or_default();
 
-
     // Check token, send a one off message if it's not okay, and don't open WS server handling
     let token_cache_mutex = state.token_cache.clone();
     let mut token_cache = token_cache_mutex.lock().await;
@@ -139,15 +136,13 @@ pub async fn gateway(
     let (response, session, msg_stream) =
         actix_ws::handle(&req, body).map_err(|_| WebSocketError::HandshakeError)?;
 
-    // Add this data to the manager for easy access to the session information
-    let mut ws_manager = state.ws_manager.lock().await;
-    ws_manager.add(uuid, token_params.address, token_params.privatekey);
+    // Add this data to a struct for easy access to the session information
+    let wrapped_ws_data = WrappedWsData::new(uuid, token_params.address, token_params.privatekey);
 
     spawn_local(handle_ws(
-        uuid,
+        wrapped_ws_data,
         ws_server_handle,
         session,
-        state.ws_manager.clone(),
         msg_stream,
     ));
 

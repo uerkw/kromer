@@ -22,7 +22,6 @@ pub fn parse_message(msg: String) -> Result<Value, KromerError> {
         Ok(message) => message,
         Err(_) => Err(KromerError::WebSocket(WebSocketError::JsonParseRead))?,
     };
-    tracing::debug!("JSON Parsed as: {:?}", json_msg.as_str());
 
     tracing::debug!(
         "Parsing for Message ID: {}, Type: {}",

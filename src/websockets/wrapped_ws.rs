@@ -21,7 +21,7 @@ impl WrappedWsData {
         }
     }
 
-    pub fn is_guest(self) -> bool {
+    pub fn is_guest(&self) -> bool {
         self.address == *"guest"
     }
 }

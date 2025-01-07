@@ -2,13 +2,12 @@ use crate::errors::{websocket::WebSocketError, KromerError};
 use std::{
     pin::pin,
     str::FromStr,
-    sync::Arc,
     time::{Duration, Instant},
 };
 
 use super::{
     types::common::WebSocketMessageType, utils::parse_message::parse_message,
-    wrapped_ws::WrappedWsData, ws_manager::WsDataManager, ws_server::WsServerHandle,
+    wrapped_ws::WrappedWsData, ws_server::WsServerHandle,
 };
 use actix_ws::AggregatedMessage;
 use futures_util::{
@@ -18,21 +17,17 @@ use futures_util::{
 };
 use serde_json::json;
 use surrealdb::Uuid;
-use tokio::{
-    sync::{mpsc, Mutex},
-    task::JoinHandle,
-    time::interval,
-};
+use tokio::{sync::mpsc, task::JoinHandle, time::interval};
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
+// TODO: 30 seconds for debugging, should probably be around 10 seconds for client timeout in prooduction
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(30);
 const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(10);
 
 pub async fn handle_ws(
-    session_uuid: surrealdb::Uuid,
+    wrapped_ws_data: WrappedWsData,
     ws_server: WsServerHandle,
     mut session: actix_ws::Session,
-    ws_data_mgr: Arc<Mutex<WsDataManager>>,
     msg_stream: actix_ws::MessageStream,
 ) -> Result<(), KromerError> {
     let debug_span = tracing::span!(tracing::Level::DEBUG, "WS_HANDLER");
@@ -43,7 +38,8 @@ pub async fn handle_ws(
 
     let (conn_tx, mut conn_rx) = mpsc::unbounded_channel();
 
-    let channel_id = match ws_server.connect(conn_tx, session_uuid).await {
+    // Internally, the WsServer uses a channel ID to facilitate sending messages.
+    let channel_id = match ws_server.connect(conn_tx, wrapped_ws_data.token).await {
         Ok(value) => value,
         Err(_) => return Err(KromerError::WebSocket(WebSocketError::HandshakeError)),
     };
@@ -57,6 +53,9 @@ pub async fn handle_ws(
         spawn_keepalive(ws_server.clone(), channel_id).await;
 
     let mut msg_stream = pin!(msg_stream);
+
+    // TODO: This state needs to be set globally for Event Subscription Lookups, so perhaps a Mutex is still the preferred option here.
+    let mut ws_metadata = wrapped_ws_data.clone();
 
     let close_reason = loop {
         // Stack pin futures
@@ -85,12 +84,6 @@ pub async fn handle_ws(
                     }
 
                     AggregatedMessage::Text(text) => {
-                        // Every time we loop, we want to update the WS metadata
-                        let mut ws_metadata = WrappedWsData::default();
-                        if let Some(value) = ws_data_mgr.lock().await.get(session_uuid) {
-                            ws_metadata = value;
-                        };
-
                         // TODO: Better message handling
                         if text.chars().count() > 512 {
                             let error_msg = json!({
@@ -103,14 +96,22 @@ pub async fn handle_ws(
                             let _ = session.text(error_msg).await;
                         } else {
                             tracing::info!("Message received: {text}");
-                            let _ = process_text_msg(
-                                ws_metadata,
+                            let process_result = process_text_msg(
+                                &ws_metadata,
                                 &ws_server,
                                 &mut session,
                                 &text,
                                 channel_id,
                             )
                             .await;
+
+                            // If there were updates to the Metadata, we want to do them
+                            // TODO: Might need to be a global mutex so subscriptions have access to this as well.
+                            if let Ok(Some(new_metadata)) = process_result {
+                                ws_metadata = new_metadata;
+                            } else if process_result.is_err() {
+                                tracing::error!("Error in processing message")
+                            }
                         }
                     }
 
@@ -167,12 +168,12 @@ pub async fn handle_ws(
 }
 
 async fn process_text_msg(
-    ws_metadata: WrappedWsData,
+    ws_metadata: &WrappedWsData,
     _ws_server: &WsServerHandle,
     session: &mut actix_ws::Session,
     text: &str,
     _conn: Uuid,
-) -> Result<(), KromerError> {
+) -> Result<Option<WrappedWsData>, KromerError> {
     // strip leading and trailing whitespace (spaces, newlines, etc.)
     let msg = text.trim();
 
@@ -188,34 +189,44 @@ async fn process_text_msg(
         KromerError::WebSocket(WebSocketError::JsonParseRead)
     })?;
 
-    let _msg_id = msg_as_json["id"].as_i64().unwrap_or(0);
+    let msg_id = msg_as_json["id"].as_i64().unwrap_or(0);
     let msg_type = msg_as_json["type"].as_str().unwrap_or("motd");
-    tracing::debug!("Message type for {_conn} message ID: {_msg_id} was `{msg_type}`");
+    tracing::debug!("Message type for {_conn} message ID: {msg_id} was `{msg_type}`");
 
     let msg_type = WebSocketMessageType::from_str(msg_type).inspect_err(|_| {
         tracing::info!("Could not parse message type for UUID: {_conn}");
     })?;
 
+    // TODO: Testing, extract these out into reusable bits of controller logic...
     match msg_type {
         WebSocketMessageType::Address => {
             let target_address = msg_as_json["address"].as_str();
-            let response = json!({"id": _msg_id, "ok": "true", "address": target_address});
+            let response = json!({"id": msg_id, "ok": "true", "address": target_address});
             let _ = session.text(response.to_string()).await;
         }
         WebSocketMessageType::Login => {}
+        WebSocketMessageType::Logout => {
+            let new_ws_metadata = WrappedWsData::new(ws_metadata.token, "guest".to_string(), None);
+            return Ok(Some(new_ws_metadata));
+        }
         WebSocketMessageType::Motd => {
             let response =
-                json!({"id": _msg_id, "ok":"true", "motd": "This is where the MOTD will go"});
+                json!({"id": msg_id, "ok":"true", "motd": "This is where the MOTD will go"});
             let _ = session.text(response.to_string()).await;
         }
         WebSocketMessageType::Me => {
-            let response = json!({"id": _msg_id, "ok": "true", "address": ws_metadata.address});
+            let response = if ws_metadata.is_guest() {
+                json!({"ok": true, "isGuest": true, "id": msg_id })
+            } else {
+                json!({"ok": true, "isGuest": false, "address": ws_metadata.address, "id": msg_id})
+            };
+            //let response = json!({"id": _msg_id, "ok": "true", "address": ws_metadata.address});
             let _ = session.text(response.to_string()).await;
         }
         _ => {}
     }
 
-    Ok(())
+    Ok(None)
 }
 
 async fn spawn_keepalive(ws_server: WsServerHandle, conn: Uuid) -> (JoinHandle<()>, AbortHandle) {
