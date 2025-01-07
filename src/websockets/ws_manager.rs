@@ -17,14 +17,21 @@ impl WsDataManager {
         privatekey: Option<String>,
     ) -> WrappedWsData {
         let wrapped_ws = WrappedWsData::new(token, address, privatekey);
-
+        tracing::debug!("Adding UUID: {:?} to WsDataManager", token);
         self.sockets.insert(token, wrapped_ws.clone());
 
         wrapped_ws
     }
 
     pub fn get(&mut self, uuid: Uuid) -> Option<WrappedWsData> {
-        self.sockets.get(&uuid).cloned()
+        if self.sockets.contains_key(&uuid.clone()) {
+            tracing::debug!("WsData Exists");
+        } else {
+            tracing::debug!("WsData does not exist");
+        }
+        let result = self.sockets.get(&uuid);
+        tracing::debug!("Getting WrappedWsData from WsDataManager: {:?}", result);
+        result.cloned()
     }
 
     pub fn remove(&mut self, uuid: Uuid) {

@@ -25,10 +25,11 @@ use tokio::{
 };
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
-const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
+const CLIENT_TIMEOUT: Duration = Duration::from_secs(30);
 const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(10);
 
 pub async fn handle_ws(
+    session_uuid: surrealdb::Uuid,
     ws_server: WsServerHandle,
     mut session: actix_ws::Session,
     ws_data_mgr: Arc<Mutex<WsDataManager>>,
@@ -42,7 +43,7 @@ pub async fn handle_ws(
 
     let (conn_tx, mut conn_rx) = mpsc::unbounded_channel();
 
-    let conn_id = match ws_server.connect(conn_tx).await {
+    let channel_id = match ws_server.connect(conn_tx, session_uuid).await {
         Ok(value) => value,
         Err(_) => return Err(KromerError::WebSocket(WebSocketError::HandshakeError)),
     };
@@ -53,17 +54,11 @@ pub async fn handle_ws(
         .max_continuation_size(2 * 1024 * 1024);
 
     let (_keepalive_join_handle, keepalive_abort_handle) =
-        spawn_keepalive(ws_server.clone(), conn_id).await;
+        spawn_keepalive(ws_server.clone(), channel_id).await;
 
     let mut msg_stream = pin!(msg_stream);
 
     let close_reason = loop {
-        // Every time we loop, we want to update the WS metadata
-        let mut ws_metadata = WrappedWsData::default();
-        if let Some(value) = ws_data_mgr.lock().await.get(conn_id) {
-            ws_metadata = value;
-        };
-
         // Stack pin futures
         let tick = pin!(heartbeat_interval.tick());
         let msg_rx = pin!(conn_rx.recv());
@@ -90,6 +85,12 @@ pub async fn handle_ws(
                     }
 
                     AggregatedMessage::Text(text) => {
+                        // Every time we loop, we want to update the WS metadata
+                        let mut ws_metadata = WrappedWsData::default();
+                        if let Some(value) = ws_data_mgr.lock().await.get(session_uuid) {
+                            ws_metadata = value;
+                        };
+
                         // TODO: Better message handling
                         if text.chars().count() > 512 {
                             let error_msg = json!({
@@ -107,7 +108,7 @@ pub async fn handle_ws(
                                 &ws_server,
                                 &mut session,
                                 &text,
-                                conn_id,
+                                channel_id,
                             )
                             .await;
                         }
@@ -158,7 +159,7 @@ pub async fn handle_ws(
 
     keepalive_abort_handle.abort();
 
-    let _ = ws_server.disconnect(conn_id);
+    let _ = ws_server.disconnect(channel_id);
 
     let _ = session.close(close_reason).await;
 
@@ -187,7 +188,7 @@ async fn process_text_msg(
         KromerError::WebSocket(WebSocketError::JsonParseRead)
     })?;
 
-    let _msg_id = msg_as_json["id"].as_i64().unwrap_or( 0);
+    let _msg_id = msg_as_json["id"].as_i64().unwrap_or(0);
     let msg_type = msg_as_json["type"].as_str().unwrap_or("motd");
     tracing::debug!("Message type for {_conn} message ID: {_msg_id} was `{msg_type}`");
 

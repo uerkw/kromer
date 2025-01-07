@@ -63,8 +63,8 @@ pub async fn setup_ws(
     let mut token_cache = token_cache_mutex.lock().await;
     token_cache.add_token(uuid, token_params);
 
-    let token_cache2 = token_cache_mutex.clone();
     // Spawn a green thread that will handle token cleanup.
+    let token_cache2 = token_cache_mutex.clone();
     let uuid2 = uuid;
     tokio::spawn(async move {
         let tracing_span = tracing::span!(tracing::Level::DEBUG, "spawned_token_cleanup");
@@ -78,6 +78,7 @@ pub async fn setup_ws(
         }
     });
 
+    // Make the URL and return it to the user.
     let url = match utils::make_url::make_url(uuid) {
         Ok(value) => value,
         Err(e) => return Err(e),
@@ -113,32 +114,37 @@ pub async fn gateway(
         return send_error_message(req.clone(), body).await;
     }
 
+    // Unwrap should be fine, we checked already if there was an error
     let uuid = uuid_result.unwrap_or_default();
 
-    let token_cache_mutex = state.token_cache.clone();
-    let mut token_cache = token_cache_mutex.lock().await;
 
     // Check token, send a one off message if it's not okay, and don't open WS server handling
+    let token_cache_mutex = state.token_cache.clone();
+    let mut token_cache = token_cache_mutex.lock().await;
     if !token_cache.check_token(uuid) {
         drop(token_cache);
         tracing::info!("Token {uuid} was not found in cache");
         return send_error_message(req.clone(), body).await;
     }
 
+    // Token was valid, now we can remove it from the cache
     tracing::info!("Token {uuid} was valid");
     let token_params = token_cache
         .remove_token(uuid)
         .ok_or_else(|| KromerError::WebSocket(WebSocketError::InvalidUuid))?;
     drop(token_cache);
 
+    // Clone a WsServerHandle so that we already have the Server's Command Channel referenced.
     let ws_server_handle = state.ws_server_handle.clone();
     let (response, session, msg_stream) =
         actix_ws::handle(&req, body).map_err(|_| WebSocketError::HandshakeError)?;
 
+    // Add this data to the manager for easy access to the session information
     let mut ws_manager = state.ws_manager.lock().await;
     ws_manager.add(uuid, token_params.address, token_params.privatekey);
 
     spawn_local(handle_ws(
+        uuid,
         ws_server_handle,
         session,
         state.ws_manager.clone(),

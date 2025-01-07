@@ -6,6 +6,7 @@ pub enum Command {
     Connect {
         conn_tx: mpsc::UnboundedSender<String>,
         res_tx: oneshot::Sender<Uuid>,
+        session_uuid: surrealdb::Uuid,
     },
 
     Disconnect {
@@ -16,9 +17,15 @@ pub enum Command {
         res_tx: oneshot::Sender<Vec<Uuid>>,
     },
 
-    Message {
+    ChannelMessage {
         msg: String,
         conn: Uuid,
+        res_tx: oneshot::Sender<()>,
+    },
+
+    SessionMessage {
+        msg: String,
+        session: surrealdb::Uuid,
         res_tx: oneshot::Sender<()>,
     },
 }
