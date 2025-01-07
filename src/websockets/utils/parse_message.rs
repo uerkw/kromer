@@ -3,7 +3,7 @@ use serde_json::{self, Error as SerdeJsonError, Value};
 use std::collections::HashMap;
 
 use crate::errors::{websocket::WebSocketError, KromerError};
-use crate::websockets::types::handle_ws::NumberOrString;
+use crate::websockets::types::message::NumberOrString;
 
 #[derive(Debug, Deserialize, Serialize)]
 struct AbstractData {
@@ -22,10 +22,10 @@ pub fn parse_message(msg: String) -> Result<Value, KromerError> {
         Ok(message) => message,
         Err(_) => Err(KromerError::WebSocket(WebSocketError::JsonParseRead))?,
     };
-    tracing::debug!("JSON Parsed as: {:?}", json_msg);
+    tracing::debug!("JSON Parsed as: {:?}", json_msg.to_string());
 
     tracing::debug!(
-        "Processing for Message ID: {}, Type: {}",
+        "Parsing for Message ID: {}, Type: {}",
         json_msg["id"].to_string(),
         json_msg["type"].to_string()
     );

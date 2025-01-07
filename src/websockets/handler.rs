@@ -1,10 +1,15 @@
 use crate::errors::{websocket::WebSocketError, KromerError};
 use std::{
     pin::pin,
+    str::FromStr,
+    sync::Arc,
     time::{Duration, Instant},
 };
 
-use super::ws_server::WsServerHandle;
+use super::{
+    types::common::WebSocketMessageType, utils::parse_message::parse_message,
+    wrapped_ws::WrappedWsData, ws_manager::WsDataManager, ws_server::WsServerHandle,
+};
 use actix_ws::AggregatedMessage;
 use futures_util::{
     future::{select, Either},
@@ -13,7 +18,11 @@ use futures_util::{
 };
 use serde_json::json;
 use surrealdb::Uuid;
-use tokio::{sync::mpsc, task::JoinHandle, time::interval};
+use tokio::{
+    sync::{mpsc, Mutex},
+    task::JoinHandle,
+    time::interval,
+};
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -22,12 +31,12 @@ const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(10);
 pub async fn handle_ws(
     ws_server: WsServerHandle,
     mut session: actix_ws::Session,
+    ws_data_mgr: Arc<Mutex<WsDataManager>>,
     msg_stream: actix_ws::MessageStream,
 ) -> Result<(), KromerError> {
     let debug_span = tracing::span!(tracing::Level::DEBUG, "WS_HANDLER");
     let _tracing_debug_enter = debug_span.enter();
 
-    let mut name: Option<String> = None;
     let mut last_heartbeat = Instant::now();
     let mut heartbeat_interval = interval(HEARTBEAT_INTERVAL);
 
@@ -49,6 +58,12 @@ pub async fn handle_ws(
     let mut msg_stream = pin!(msg_stream);
 
     let close_reason = loop {
+        // Every time we loop, we want to update the WS metadata
+        let mut ws_metadata = WrappedWsData::default();
+        if let Some(value) = ws_data_mgr.lock().await.get(conn_id) {
+            ws_metadata = value;
+        };
+
         // Stack pin futures
         let tick = pin!(heartbeat_interval.tick());
         let msg_rx = pin!(conn_rx.recv());
@@ -77,17 +92,22 @@ pub async fn handle_ws(
                     AggregatedMessage::Text(text) => {
                         // TODO: Better message handling
                         if text.chars().count() > 512 {
-                            let error_msg = json!({"ok": "false", "error": "Message larger than 512 characters"}).to_string();
+                            let error_msg = json!({
+                                "ok": "false",
+                                "error": "message_too_long",
+                                "message": "Message larger than 512 characters",
+                                "type": "error"})
+                            .to_string();
                             tracing::info!("Message received was larger than 512 characters");
                             let _ = session.text(error_msg).await;
                         } else {
                             tracing::info!("Message received: {text}");
                             let _ = process_text_msg(
+                                ws_metadata,
                                 &ws_server,
                                 &mut session,
                                 &text,
                                 conn_id,
-                                &mut name,
                             )
                             .await;
                         }
@@ -146,11 +166,11 @@ pub async fn handle_ws(
 }
 
 async fn process_text_msg(
+    ws_metadata: WrappedWsData,
     _ws_server: &WsServerHandle,
     session: &mut actix_ws::Session,
     text: &str,
     _conn: Uuid,
-    _name: &mut Option<String>,
 ) -> Result<(), KromerError> {
     // strip leading and trailing whitespace (spaces, newlines, etc.)
     let msg = text.trim();
@@ -159,6 +179,40 @@ async fn process_text_msg(
     let result = session.text(msg).await;
 
     result.map_err(|_| KromerError::WebSocket(WebSocketError::MessageSend))?;
+
+    let msg_as_json = parse_message(msg.to_string());
+
+    let msg_as_json = msg_as_json.map_err(|_| {
+        tracing::info!("Could not parse JSON for UUID: {_conn}");
+        KromerError::WebSocket(WebSocketError::JsonParseRead)
+    })?;
+
+    let _msg_id = msg_as_json["id"].as_i64().unwrap_or( 0);
+    let msg_type = msg_as_json["type"].as_str().unwrap_or("motd");
+    tracing::debug!("Message type for {_conn} message ID: {_msg_id} was `{msg_type}`");
+
+    let msg_type = WebSocketMessageType::from_str(msg_type).inspect_err(|_| {
+        tracing::info!("Could not parse message type for UUID: {_conn}");
+    })?;
+
+    match msg_type {
+        WebSocketMessageType::Address => {
+            let target_address = msg_as_json["address"].to_string();
+            let response = json!({"id": _msg_id, "ok": "true", "address": target_address});
+            let _ = session.text(response.to_string()).await;
+        }
+        WebSocketMessageType::Login => {}
+        WebSocketMessageType::Motd => {
+            let response =
+                json!({"id": _msg_id, "ok":"true", "motd": "This is where the MOTD will go"});
+            let _ = session.text(response.to_string()).await;
+        }
+        WebSocketMessageType::Me => {
+            let response = json!({"id": _msg_id, "ok": "true", "address": ws_metadata.address});
+            let _ = session.text(response.to_string()).await;
+        }
+        _ => {}
+    }
 
     Ok(())
 }

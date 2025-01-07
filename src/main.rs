@@ -1,16 +1,18 @@
 use std::env;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use actix::Actor;
 use actix_web::{middleware, web, App, HttpServer};
 
 use kromer::websockets::token_cache::TokenCache;
+use kromer::websockets::ws_manager::WsDataManager;
 use kromer::websockets::ws_server::WsServer;
 use kromer::ws::actors::server::WsServerActor as NewWebSocketServer;
 use surrealdb::opt::auth::Root;
 
 use kromer::database::db::{ConnectionOptions, Database};
 use kromer::{errors::KromerError, routes, AppState};
+use tokio::sync::Mutex;
 use tokio::{spawn, try_join};
 
 #[actix_web::main]
@@ -53,12 +55,14 @@ async fn main() -> Result<(), KromerError> {
     let (ws_server, ws_server_handle) = WsServer::new();
     let ws_server = spawn(ws_server.run());
     let token_cache = Arc::new(Mutex::new(TokenCache::new()));
+    let ws_manager = Arc::new(Mutex::new(WsDataManager::default()));
 
     let state = web::Data::new(AppState {
         db: db_arc,
         old_ws_manager,
         ws_server_handle,
         token_cache,
+        ws_manager,
     });
 
     let http_server = HttpServer::new(move || {

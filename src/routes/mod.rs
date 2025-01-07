@@ -7,7 +7,6 @@ pub mod internal;
 pub mod not_found;
 pub mod old_ws;
 pub mod v1;
-pub mod ws;
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct PaginationParams {
@@ -36,6 +35,5 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(old_ws::start_ws)
             .service(old_ws::payload_ws),
     );
-    cfg.service(web::scope("/ws").configure(ws::config));
     cfg.service(web::scope("").service(index::index_get));
 }

@@ -30,8 +30,9 @@ impl TokenCache {
         }
     }
 
-    pub fn remove_token(&mut self, uuid: Uuid) {
-        self.token_cache.remove(&uuid);
+    pub fn remove_token(&mut self, uuid: Uuid) -> Option<WebSocketTokenData> {
+        let token_data = self.token_cache.remove(&uuid);
         tracing::info!("Removed token {uuid} from cache");
+        token_data
     }
 }

@@ -28,6 +28,9 @@ pub enum WebSocketError {
     #[error("WebSocket Closed")]
     WebSocketClosed,
 
+    #[error("Could not parse incoming message type")]
+    InvalidMessageType,
+
     // Shouldn't really ever happen in production...
     #[error("Server configuration issue, contact an admin")]
     ServerConfigError,

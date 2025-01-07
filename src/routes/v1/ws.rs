@@ -17,7 +17,6 @@ use crate::errors::websocket::WebSocketError;
 use crate::websockets::handler::handle_ws;
 use crate::websockets::types::common::WebSocketTokenData;
 use crate::websockets::utils;
-//use crate::websockets::ws_manager;
 use crate::{errors::KromerError, AppState};
 
 #[derive(serde::Deserialize)]
@@ -61,7 +60,7 @@ pub async fn setup_ws(
         privatekey: ws_privatekey2,
     };
 
-    let mut token_cache = token_cache_mutex.lock().unwrap();
+    let mut token_cache = token_cache_mutex.lock().await;
     token_cache.add_token(uuid, token_params);
 
     let token_cache2 = token_cache_mutex.clone();
@@ -71,7 +70,7 @@ pub async fn setup_ws(
         let tracing_span = tracing::span!(tracing::Level::DEBUG, "spawned_token_cleanup");
         let _tracing_enter = tracing_span.enter();
         sleep(std::time::Duration::from_secs(30)).await;
-        let mut token_cache = token_cache2.lock().unwrap();
+        let mut token_cache = token_cache2.lock().await;
 
         if token_cache.check_token(uuid) {
             tracing::info!("Token expired (30 secs)");
@@ -92,7 +91,7 @@ pub async fn setup_ws(
 }
 
 #[get("/gateway/{token}")]
-#[allow(clippy::await_holding_lock)] 
+//#[allow(clippy::await_holding_lock)]
 pub async fn gateway(
     req: HttpRequest,
     body: web::Payload,
@@ -115,10 +114,9 @@ pub async fn gateway(
     }
 
     let uuid = uuid_result.unwrap_or_default();
-        
 
     let token_cache_mutex = state.token_cache.clone();
-    let mut token_cache = token_cache_mutex.lock().unwrap();
+    let mut token_cache = token_cache_mutex.lock().await;
 
     // Check token, send a one off message if it's not okay, and don't open WS server handling
     if !token_cache.check_token(uuid) {
@@ -128,20 +126,32 @@ pub async fn gateway(
     }
 
     tracing::info!("Token {uuid} was valid");
-    token_cache.remove_token(uuid);
+    let token_params = token_cache
+        .remove_token(uuid)
+        .ok_or_else(|| KromerError::WebSocket(WebSocketError::InvalidUuid))?;
     drop(token_cache);
 
     let ws_server_handle = state.ws_server_handle.clone();
     let (response, session, msg_stream) =
         actix_ws::handle(&req, body).map_err(|_| WebSocketError::HandshakeError)?;
 
-    spawn_local(handle_ws(ws_server_handle, session, msg_stream));
+    let mut ws_manager = state.ws_manager.lock().await;
+    ws_manager.add(uuid, token_params.address, token_params.privatekey);
+
+    spawn_local(handle_ws(
+        ws_server_handle,
+        session,
+        state.ws_manager.clone(),
+        msg_stream,
+    ));
 
     Ok(response)
 }
 
-async fn send_error_message(req: HttpRequest, body: web::Payload) -> Result<HttpResponse, KromerError>  {
-
+async fn send_error_message(
+    req: HttpRequest,
+    body: web::Payload,
+) -> Result<HttpResponse, KromerError> {
     let (response, mut session, _msg_stream) =
         actix_ws::handle(&req, body).map_err(|_| WebSocketError::HandshakeError)?;
 
@@ -153,6 +163,5 @@ async fn send_error_message(req: HttpRequest, body: web::Payload) -> Result<Http
 }
 
 pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(setup_ws);
-    cfg.service(gateway);
+    cfg.service(web::scope("/ws").service(setup_ws).service(gateway));
 }

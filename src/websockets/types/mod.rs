@@ -1,3 +1,3 @@
 pub mod common;
-pub mod handle_ws;
+pub mod message;
 pub mod server;
