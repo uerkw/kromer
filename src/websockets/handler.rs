@@ -1,14 +1,26 @@
-use crate::errors::{websocket::WebSocketError, KromerError};
+use crate::{
+    errors::{websocket::WebSocketError, KromerError},
+    websockets::models::{error::ErrorResponse, websockets::IncomingWebsocketMessage},
+    AppState,
+};
 use std::{
     pin::pin,
-    str::FromStr,
+    sync::Arc,
     time::{Duration, Instant},
 };
 
 use super::{
-    types::common::WebSocketMessageType, utils::parse_message::parse_message,
-    wrapped_ws::WrappedWsData, ws_server::WsServerHandle,
+    models::websockets::{
+        OutgoingWebSocketMessage, WebSocketMessageType,
+    },
+    utils::datetime::convert_to_iso_string,
+    wrapped_ws::WrappedWsData,
+    ws_server::WsServerHandle,
 };
+
+use crate::websockets::routes::me::get_me as route_get_me;
+
+use actix_web::web::Data;
 use actix_ws::AggregatedMessage;
 use futures_util::{
     future::{select, Either},
@@ -16,7 +28,7 @@ use futures_util::{
     StreamExt,
 };
 use serde_json::json;
-use surrealdb::Uuid;
+use surrealdb::{engine::any::Any, Surreal, Uuid};
 use tokio::{sync::mpsc, task::JoinHandle, time::interval};
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -25,6 +37,7 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(30);
 const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(10);
 
 pub async fn handle_ws(
+    state: Data<AppState>,
     wrapped_ws_data: WrappedWsData,
     ws_server: WsServerHandle,
     mut session: actix_ws::Session,
@@ -86,6 +99,7 @@ pub async fn handle_ws(
                     AggregatedMessage::Text(text) => {
                         // TODO: Better message handling
                         if text.chars().count() > 512 {
+                            // TODO: Use error message struct in models
                             let error_msg = json!({
                                 "ok": "false",
                                 "error": "message_too_long",
@@ -97,11 +111,11 @@ pub async fn handle_ws(
                         } else {
                             tracing::info!("Message received: {text}");
                             let process_result = process_text_msg(
+                                &state.db,
                                 &ws_metadata,
                                 &ws_server,
                                 &mut session,
                                 &text,
-                                channel_id,
                             )
                             .await;
 
@@ -168,62 +182,61 @@ pub async fn handle_ws(
 }
 
 async fn process_text_msg(
+    db: &Arc<Surreal<Any>>,
     ws_metadata: &WrappedWsData,
     _ws_server: &WsServerHandle,
     session: &mut actix_ws::Session,
     text: &str,
-    _conn: Uuid,
 ) -> Result<Option<WrappedWsData>, KromerError> {
     // strip leading and trailing whitespace (spaces, newlines, etc.)
     let msg = text.trim();
 
-    // Echo the message back for now..
-    let result = session.text(msg).await;
+    //// For testing, consider echoing the message back
+    // let result = session.text(msg).await;
 
-    result.map_err(|_| KromerError::WebSocket(WebSocketError::MessageSend))?;
+    // result.map_err(|_| KromerError::WebSocket(WebSocketError::MessageSend))?;
 
-    let msg_as_json = parse_message(msg.to_string());
+    let parsed_msg_result: Result<IncomingWebsocketMessage, serde_json::Error> =
+        serde_json::from_str(msg);
 
-    let msg_as_json = msg_as_json.map_err(|_| {
-        tracing::info!("Could not parse JSON for UUID: {_conn}");
-        KromerError::WebSocket(WebSocketError::JsonParseRead)
-    })?;
-
-    let msg_id = msg_as_json["id"].as_i64().unwrap_or(0);
-    let msg_type = msg_as_json["type"].as_str().unwrap_or("motd");
-    tracing::debug!("Message type for {_conn} message ID: {msg_id} was `{msg_type}`");
-
-    let msg_type = WebSocketMessageType::from_str(msg_type).inspect_err(|_| {
-        tracing::info!("Could not parse message type for UUID: {_conn}");
-    })?;
-
-    // TODO: Testing, extract these out into reusable bits of controller logic...
-    match msg_type {
-        WebSocketMessageType::Address => {
-            let target_address = msg_as_json["address"].as_str();
-            let response = json!({"id": msg_id, "ok": "true", "address": target_address});
-            let _ = session.text(response.to_string()).await;
+    let parsed_msg = match parsed_msg_result {
+        Ok(value) => value,
+        Err(err) => {
+            tracing::error!("Serde error: {}", err);
+            tracing::info!("Could not parse JSON for UUID: {}", ws_metadata.token);
+            return Err(KromerError::WebSocket(WebSocketError::JsonParseRead));
         }
-        WebSocketMessageType::Login => {}
-        WebSocketMessageType::Logout => {
-            let new_ws_metadata = WrappedWsData::new(ws_metadata.token, "guest".to_string(), None);
-            return Ok(Some(new_ws_metadata));
+    };
+
+    let msg_type = parsed_msg.message_type;
+    let msg_id = parsed_msg.id;
+
+    let _msg_result = match msg_type {
+        WebSocketMessageType::Me => route_get_me(msg_id, db, ws_metadata).await,
+        _ => {
+            // TODO: This is just an example, we should error here with a good error message
+            Ok(OutgoingWebSocketMessage {
+                ok: Some(false),
+                id: msg_id,
+                message: WebSocketMessageType::Error {
+                    error: ErrorResponse {
+                        error: "invalid_parameter".to_string(),
+                        message: Some("Invalid parameter type".to_string()),
+                    },
+                },
+            })
         }
-        WebSocketMessageType::Motd => {
-            let response =
-                json!({"id": msg_id, "ok":"true", "motd": "This is where the MOTD will go"});
-            let _ = session.text(response.to_string()).await;
+    };
+
+    match _msg_result {
+        Ok(value) => {
+            let _ = session
+                .text(serde_json::to_string(&value).unwrap_or_else(|_| "{}".to_string()))
+                .await;
         }
-        WebSocketMessageType::Me => {
-            let response = if ws_metadata.is_guest() {
-                json!({"ok": true, "isGuest": true, "id": msg_id })
-            } else {
-                json!({"ok": true, "isGuest": false, "address": ws_metadata.address, "id": msg_id})
-            };
-            //let response = json!({"id": _msg_id, "ok": "true", "address": ws_metadata.address});
-            let _ = session.text(response.to_string()).await;
+        Err(_) => {
+            let _ = session.text("Error").await;
         }
-        _ => {}
     }
 
     Ok(None)
@@ -237,8 +250,12 @@ async fn spawn_keepalive(ws_server: WsServerHandle, conn: Uuid) -> (JoinHandle<(
 
         loop {
             interval.tick().await;
-            let cur_time = chrono::offset::Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
-            let return_message = json!({"type":"keepalive", "server_time": cur_time});
+            let cur_time = convert_to_iso_string(chrono::offset::Utc::now());
+            let keepalive_time = WebSocketMessageType::Keepalive {
+                server_time: cur_time.clone(),
+            };
+            let return_message =
+                serde_json::to_string(&keepalive_time).unwrap_or_else(|_| "{}".to_string());
             let _ = ws_server
                 .send_message(conn, return_message.to_string())
                 .await;

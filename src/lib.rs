@@ -6,6 +6,7 @@ use tokio::sync::Mutex;
 use websockets::{token_cache::TokenCache, ws_manager::WsDataManager, ws_server::WsServerHandle};
 use ws::actors::server::WsServerActor as OldWebSocketServer;
 
+pub mod controllers;
 pub mod database;
 pub mod errors;
 pub mod guards;

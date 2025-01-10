@@ -3,11 +3,11 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct AddressJson {
     pub address: String,
-    pub balance: i64,
+    pub balance: f64,
     #[serde(rename = "totalin")]
-    pub total_in: i64,
+    pub total_in: f64,
     #[serde(rename = "totalout")]
-    pub total_out: i64,
+    pub total_out: f64,
     #[serde(rename = "firstseen")]
     pub first_seen: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -44,9 +44,9 @@ mod tests {
             ok: true,
             address: AddressJson {
                 address: "kre3w0i79j".to_owned(),
-                balance: 86945,
-                total_in: 123364,
-                total_out: 38292,
+                balance: 86945.0,
+                total_in: 123364.0,
+                total_out: 38292.0,
                 first_seen: "2015-03-13T12:55:18.000Z".to_owned(),
                 names: None,
             },

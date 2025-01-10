@@ -133,13 +133,14 @@ pub async fn gateway(
 
     // Clone a WsServerHandle so that we already have the Server's Command Channel referenced.
     let ws_server_handle = state.ws_server_handle.clone();
-    let (response, session, msg_stream) =
-        actix_ws::handle(&req, body).map_err(|_| KromerError::WebSocket(WebSocketError::HandshakeError))?;
+    let (response, session, msg_stream) = actix_ws::handle(&req, body)
+        .map_err(|_| KromerError::WebSocket(WebSocketError::HandshakeError))?;
 
     // Add this data to a struct for easy access to the session information
     let wrapped_ws_data = WrappedWsData::new(uuid, token_params.address, token_params.privatekey);
 
     spawn_local(handle_ws(
+        state.clone(),
         wrapped_ws_data,
         ws_server_handle,
         session,

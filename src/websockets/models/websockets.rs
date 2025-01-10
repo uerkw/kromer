@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use super::addresses::AddressJson;
+
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WebSocketSubscription {
@@ -15,6 +17,22 @@ pub enum WebSocketSubscription {
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum WebSocketMessageType {
+    Hello {
+        #[serde(flatten)]
+        motd: super::motd::DetailedMotd,
+    },
+    Error {
+        #[serde(flatten)]
+        error: super::error::ErrorResponse,
+    },
+    Response {
+        #[serde(flatten)]
+        message: OutgoingWebSocketMessageType,
+    },
+    Keepalive {
+        server_time: String,
+    },
+
     // 100% these are missing a lot
     Address,
     Login,
@@ -27,19 +45,29 @@ pub enum WebSocketMessageType {
     Unsubscribe,
     MakeTransaction,
     Work,
+}
 
-    Hello {
+#[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "responding_to_type")]
+pub enum OutgoingWebSocketMessageType {
+    Address {
         #[serde(flatten)]
-        motd: super::motd::DetailedMotd,
+        address: AddressJson,
     },
-    Error {
-        #[serde(flatten)]
-        error: super::error::ErrorResponse,
+    Login {},
+    Logout,
+    Me {
+        #[serde(rename = "isGuest")]
+        is_guest: bool,
+        address: Option<AddressJson>,
     },
-    Response, // TODO: Implement this, unsure how to.
-    Keepalive {
-        server_time: String,
-    },
+    SubmitBlock,
+    Subscribe,
+    GetSubscriptionLevel,
+    GetValidSubscriptionLevels,
+    Unsubcribe,
+    MakeTransaction,
+    Work,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -67,13 +95,14 @@ pub struct WebSocketTokenData {
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct IncomingWebsocketMessage {
     pub id: String,
-    #[serde(rename = "type")]
+    #[serde(flatten, rename = "type")]
     pub message_type: WebSocketMessageType,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct OutgoingWebSocketMessage {
     pub ok: Option<bool>,
+    pub id: String,
     #[serde(flatten)]
     pub message: WebSocketMessageType,
 }
@@ -133,7 +162,7 @@ impl WebSocketMessageType {
             WebSocketMessageType::Work => "work",
             WebSocketMessageType::Hello { .. } => "hello",
             WebSocketMessageType::Error { .. } => "error",
-            WebSocketMessageType::Response => "response",
+            WebSocketMessageType::Response { .. } => "response",
             WebSocketMessageType::Keepalive { .. } => "keepalive",
         }
     }

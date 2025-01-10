@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
 use crate::websockets::models::addresses::AddressJson;
 use crate::websockets::models::blocks::BlockJson;
 use crate::websockets::models::names::NameJson;
 use crate::websockets::models::transactions::TransactionJson;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -40,7 +40,7 @@ pub struct SearchResult {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchResultMatches {
-    pub exact_address: Option<AddressJson>, 
+    pub exact_address: Option<AddressJson>,
     pub exact_block: Option<BlockJson>,
     pub exact_name: Option<NameJson>,
     pub exact_transaction: Option<TransactionJson>,
