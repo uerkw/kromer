@@ -237,8 +237,8 @@ async fn spawn_keepalive(ws_server: WsServerHandle, conn: Uuid) -> (JoinHandle<(
 
         loop {
             interval.tick().await;
-            let cur_time = chrono::offset::Utc::now();
-            let return_message = json!({"type":"keepalive", "server_time": cur_time.to_rfc3339()});
+            let cur_time = chrono::offset::Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
+            let return_message = json!({"type":"keepalive", "server_time": cur_time});
             let _ = ws_server
                 .send_message(conn, return_message.to_string())
                 .await;
