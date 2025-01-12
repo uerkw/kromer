@@ -1,10 +1,15 @@
-use serde::Serializer;
-use surrealdb::sql::Thing;
-
 pub mod name;
 pub mod player;
 pub mod transaction;
 pub mod wallet;
+
+use serde::{Deserialize, Serialize, Serializer};
+use surrealdb::sql::Thing;
+
+#[derive(Debug, Default, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
+pub struct CountResponse {
+    pub count: usize,
+}
 
 pub fn serialize_table<S>(x: &Thing, s: S) -> Result<S::Ok, S::Error>
 where
