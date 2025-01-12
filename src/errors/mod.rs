@@ -1,3 +1,4 @@
+pub mod name;
 pub mod transaction;
 pub mod wallet;
 pub mod websocket;
@@ -18,6 +19,9 @@ pub enum KromerError {
 
     #[error("Wallet error: {0}")]
     Wallet(#[from] wallet::WalletError),
+
+    #[error("Name error: {0}")]
+    Name(#[from] name::NameError),
 
     #[error("Transaction error: {0}")]
     Transaction(#[from] transaction::TransactionError),
@@ -45,6 +49,7 @@ impl error::ResponseError for KromerError {
             KromerError::Database(..) => StatusCode::INTERNAL_SERVER_ERROR,
             KromerError::Wallet(e) => e.status_code(),
             KromerError::Transaction(e) => e.status_code(),
+            KromerError::Name(e) => e.status_code(),
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
