@@ -29,7 +29,7 @@ impl From<wallet::Model> for AddressJson {
             balance: wallet.balance,
             total_in: wallet.total_in,
             total_out: wallet.total_out,
-            first_seen: wallet.created_at.to_string(), // Is this really the right thing?
+            first_seen: wallet.created_at.to_raw(), // Is this really the right thing?
             names: None, // NOTE: We'll have to manually edit this when asked for, lmao
         }
     }
