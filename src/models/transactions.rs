@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::database::models::transaction;
+use transaction::TransactionNameData;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct TransactionListResponse {
@@ -61,6 +62,8 @@ pub enum TransactionType {
 
 impl From<transaction::Model> for TransactionJson {
     fn from(transaction: transaction::Model) -> Self {
+        let name_data = TransactionNameData::parse_opt_ref(&transaction.metadata);
+
         Self {
             id: 0,                                    // We dont do incremental IDs, do we give a shit?
             from: Some(transaction.from.to_string()), // TODO: use address actual address instead.
@@ -69,8 +72,8 @@ impl From<transaction::Model> for TransactionJson {
             time: transaction.timestamp.to_raw(),
             name: None, // TODO: Populate this later, maybe with a separate function.
             metadata: transaction.metadata,
-            sent_metaname: None, // NOTE: We do not support this, yet.
-            sent_name: None,     // NOTE: We do not support this, yet.
+            sent_metaname: name_data.meta,
+            sent_name: name_data.name,
             transaction_type: transaction.transaction_type,
         }
     }

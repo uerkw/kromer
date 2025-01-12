@@ -2114,6 +2114,8 @@ dependencies = [
  "dotenvy",
  "futures-util",
  "names",
+ "once_cell",
+ "regex",
  "serde",
  "serde_json",
  "surrealdb",

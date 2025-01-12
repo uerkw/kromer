@@ -1,3 +1,5 @@
+use once_cell::sync::Lazy;
+use regex::Regex;
 use surrealdb::{
     engine::any::Any,
     sql::{Datetime, Id, Thing},
@@ -6,6 +8,9 @@ use surrealdb::{
 
 use super::{serialize_table_opt, CountResponse};
 use crate::{models::transactions::TransactionType, routes::PaginationParams};
+
+static KST_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^(?:([a-z0-9-_]{1,32})@)?([a-z0-9]{1,64})\.kst").unwrap());
 
 #[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct Model {
@@ -29,6 +34,12 @@ pub struct TransactionCreateData {
     pub to: Thing,
     pub amount: f64,
     pub metadata: Option<String>,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
+pub struct TransactionNameData {
+    pub meta: Option<String>,
+    pub name: Option<String>,
 }
 
 impl Model {
@@ -89,5 +100,84 @@ impl Model {
         let count = count.unwrap_or_default(); // Its fine, we make sure we always get a response with the `or` statement in the query.
 
         Ok(count.count)
+    }
+}
+
+impl TransactionNameData {
+    /// Parse a transaction name from a string-like type according to CommonMeta format.
+    /// Takes any type that can be converted to a string reference.
+    ///
+    /// If the input is empty, returns a default `TransactionNameData`.
+    /// Otherwise parses according to the pattern: `meta@name.kst`
+    ///
+    /// # Examples
+    /// ```
+    /// let data = TransactionNameData::parse("meta@name.kst");
+    /// assert_eq!(data.meta, Some("meta".to_string()));
+    /// assert_eq!(data.name, Some("name".to_string()));
+    ///
+    /// let empty = TransactionNameData::parse("");
+    /// assert_eq!(empty, TransactionNameData::default());
+    /// ```
+    pub fn parse<S: AsRef<str>>(input: S) -> Self {
+        let input = input.as_ref();
+        if input.is_empty() {
+            return Self::default(); // Don't do useless parsing if the input is empty, thats silly.
+        }
+
+        match KST_REGEX.captures(input) {
+            Some(captures) => {
+                let meta = captures.get(1).map(|m| m.as_str().to_string()); // TODO: Less allocating, should maybe use `&str` on the transaction models
+                let name = captures.get(2).map(|m| m.as_str().to_string());
+
+                Self { meta, name }
+            }
+            None => Self::default(),
+        }
+    }
+
+    /// Parse a transaction name from an optional string-like type.
+    /// If the input is `None`, returns a default `TransactionNameData`.
+    /// Otherwise, parses the string according to CommonMeta format.
+    ///
+    /// # Examples
+    /// ```
+    /// let data = TransactionNameData::parse_opt(Some("meta@name.kst"));
+    /// assert_eq!(data.meta, Some("meta".to_string()));
+    /// assert_eq!(data.name, Some("name".to_string()));
+    ///
+    /// let empty = TransactionNameData::parse_opt(None::<String>);
+    /// assert_eq!(empty, TransactionNameData::default());
+    /// ```
+    pub fn parse_opt<S: AsRef<str>>(input: Option<S>) -> Self {
+        if input.is_none() {
+            return Self::default(); // Do we really need to parse stuff is there is no value? No, we dont.
+        }
+
+        let input = input.unwrap(); // We can do this, we made sure it exists.
+        return Self::parse(input);
+    }
+
+    /// Parse a transaction name from a reference to an optional string-like type.
+    /// If the input is `None`, returns a default `TransactionNameData`.
+    /// Otherwise, parses the string according to CommonMeta format.
+    ///
+    /// # Examples
+    /// ```
+    /// let input = Some("meta@name.kst".to_string());
+    /// let data = TransactionNameData::parse_opt_ref(&input);
+    /// assert_eq!(data.meta, Some("meta".to_string()));
+    /// assert_eq!(data.name, Some("name".to_string()));
+    ///
+    /// let empty = TransactionNameData::parse_opt_ref(&None::<String>);
+    /// assert_eq!(empty, TransactionNameData::default());
+    /// ```
+    pub fn parse_opt_ref<S: AsRef<str>>(input: &Option<S>) -> Self {
+        if input.is_none() {
+            return Self::default(); // Do we really need to parse stuff is there is no value? No, we dont.
+        }
+
+        let input = input.as_ref().unwrap(); // We can do this, we made sure it exists.
+        return Self::parse(input);
     }
 }
