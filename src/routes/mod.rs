@@ -6,7 +6,6 @@ pub mod index;
 pub mod internal;
 pub mod krist;
 pub mod not_found;
-pub mod old_ws;
 pub mod v1;
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
@@ -31,11 +30,6 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         web::scope("/api/_internal")
             .guard(guards::internal_key_guard)
             .configure(internal::config),
-    );
-    cfg.service(
-        web::scope("/actor_ws")
-            .service(old_ws::start_ws)
-            .service(old_ws::payload_ws),
     );
     cfg.service(web::scope("").service(index::index_get));
 }
