@@ -3,6 +3,20 @@ use serde::{Deserialize, Serialize};
 use crate::database::models::wallet;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
+pub struct AddressListResponse {
+    pub ok: bool,
+    pub count: usize,
+    pub total: usize,
+    pub addresses: Vec<AddressJson>,
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
+pub struct AddressResponse {
+    pub ok: bool,
+    pub address: AddressJson,
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct AddressJson {
     pub address: String,
     pub balance: f64,

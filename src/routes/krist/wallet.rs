@@ -2,10 +2,10 @@ use actix_web::{get, web, HttpResponse};
 
 use crate::database::models::wallet::Model as Wallet;
 use crate::errors::{wallet::WalletError, KromerError};
-use crate::models::addresses::AddressJson;
+use crate::models::addresses::{AddressJson, AddressListResponse, AddressResponse};
 use crate::{routes::PaginationParams, AppState};
 
-#[get("/")]
+#[get("")]
 async fn wallet_list(
     state: web::Data<AppState>,
     pagination: web::Query<PaginationParams>,
@@ -13,10 +13,19 @@ async fn wallet_list(
     let pagination = pagination.into_inner();
     let db = &state.db;
 
-    let wallets = Wallet::all(db, &pagination).await?;
-    let response: Vec<AddressJson> = wallets.into_iter().map(|wallet| wallet.into()).collect();
+    let total = Wallet::count(db).await?;
+    let addresses = Wallet::all(db, &pagination)
+        .await?
+        .into_iter()
+        .map(|wallet| wallet.into())
+        .collect::<Vec<AddressJson>>();
 
-    Ok(HttpResponse::Ok().json(response))
+    Ok(HttpResponse::Ok().json(AddressListResponse {
+        ok: true,
+        count: addresses.len(),
+        total,
+        addresses,
+    }))
 }
 
 #[get("/{address}")]
@@ -29,13 +38,13 @@ async fn wallet_get(
 
     let wallet = Wallet::get_by_address_excl(db, address).await?;
 
-    match wallet {
-        Some(wallet) => {
-            let wallet: AddressJson = wallet.into();
-            Ok(HttpResponse::Ok().json(wallet))
-        }
-        None => Err(KromerError::Wallet(WalletError::NotFound)),
-    }
+    wallet
+        .map(|addr| AddressResponse {
+            ok: true,
+            address: addr.into(),
+        })
+        .map(|response| HttpResponse::Ok().json(response))
+        .ok_or_else(|| KromerError::Wallet(WalletError::NotFound))
 }
 
 #[get("/richest")]
@@ -46,10 +55,19 @@ async fn wallet_richest(
     let pagination = pagination.into_inner();
     let db = &state.db;
 
-    let wallets = Wallet::get_richest(db, &pagination).await?;
-    let response: Vec<AddressJson> = wallets.into_iter().map(|wallet| wallet.into()).collect();
+    let total = Wallet::count(db).await?;
+    let addresses = Wallet::get_richest(db, &pagination)
+        .await?
+        .into_iter()
+        .map(|wallet| wallet.into())
+        .collect::<Vec<AddressJson>>();
 
-    Ok(HttpResponse::Ok().json(response))
+    Ok(HttpResponse::Ok().json(AddressListResponse {
+        ok: true,
+        count: addresses.len(),
+        total,
+        addresses,
+    }))
 }
 
 #[get("/{address}/transactions")]
@@ -81,10 +99,10 @@ async fn wallet_get_names(
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/addresses")
-            .service(wallet_list)
             .service(wallet_richest)
             .service(wallet_get)
             .service(wallet_get_transactions)
-            .service(wallet_get_names),
+            .service(wallet_get_names)
+            .service(wallet_list),
     );
 }
