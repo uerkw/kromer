@@ -4,7 +4,7 @@ use surrealdb::{
     Surreal,
 };
 
-use super::serialize_table_opt;
+use super::{serialize_table_opt, CountResponse};
 use crate::routes::PaginationParams;
 
 #[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -133,5 +133,16 @@ impl Model {
         let models: Vec<Model> = response.take(0)?;
 
         Ok(models)
+    }
+
+    /// Get the total amount of wallets in the database
+    pub async fn count(db: &Surreal<Any>) -> Result<usize, surrealdb::Error> {
+        let q = "(SELECT count() FROM transaction wallet BY count)[0] or { count: 0 }";
+
+        let mut response = db.query(q).await?;
+        let count: Option<CountResponse> = response.take(0)?;
+        let count = count.unwrap_or_default(); // Its fine, we make sure we always get a response with the `or` statement in the query.
+
+        Ok(count.count)
     }
 }
