@@ -2,10 +2,10 @@ use actix_web::{get, web, HttpResponse};
 
 use crate::database::models::transaction::Model as Transaction;
 use crate::errors::{transaction::TransactionError, KromerError};
-use crate::models::transactions::TransactionJson;
+use crate::models::transactions::{TransactionJson, TransactionListResponse, TransactionResponse};
 use crate::{routes::PaginationParams, AppState};
 
-#[get("/")]
+#[get("")]
 async fn transaction_list(
     state: web::Data<AppState>,
     query: web::Query<PaginationParams>,
@@ -13,14 +13,23 @@ async fn transaction_list(
     let params = query.into_inner();
     let db = &state.db;
 
+    let total = Transaction::count(db).await?;
+
     let transactions = Transaction::all(db, &params).await?;
-    let response: Vec<TransactionJson> =
+    let transactions: Vec<TransactionJson> =
         transactions.into_iter().map(|trans| trans.into()).collect();
+
+    let response = TransactionListResponse {
+        ok: true,
+        count: transactions.len(),
+        total,
+        transactions,
+    };
 
     Ok(HttpResponse::Ok().json(response))
 }
 
-#[get("/")]
+#[get("/latest")]
 async fn transaction_latest(
     _state: web::Data<AppState>,
     _query: web::Query<PaginationParams>,
@@ -40,20 +49,20 @@ async fn transaction_get(
     let db = &state.db;
 
     let slim = Transaction::get_partial(db, id).await?;
-    match slim {
-        Some(trans) => {
-            let trans: TransactionJson = trans.into();
-            Ok(HttpResponse::Ok().json(trans))
-        }
-        None => Err(KromerError::Transaction(TransactionError::NotFound)),
-    }
+
+    slim.map(|trans| TransactionResponse {
+        ok: true,
+        transaction: trans.into(),
+    })
+    .map(|response| HttpResponse::Ok().json(response))
+    .ok_or_else(|| KromerError::Transaction(TransactionError::NotFound))
 }
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/transactions")
-            .service(transaction_list)
             .service(transaction_latest)
-            .service(transaction_get),
+            .service(transaction_get)
+            .service(transaction_list),
     );
 }

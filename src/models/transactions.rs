@@ -3,12 +3,42 @@ use serde::{Deserialize, Serialize};
 use crate::database::models::transaction;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
+pub struct TransactionListResponse {
+    pub ok: bool,
+
+    /// The count of results.
+    pub count: usize,
+
+    /// The total amount of transactions
+    pub total: usize,
+
+    pub transactions: Vec<TransactionJson>,
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
+pub struct TransactionResponse {
+    pub ok: bool,
+    pub transaction: TransactionJson,
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct TransactionJson {
+    /// The ID of this transaction.
     pub id: i64,
+
+    /// The sender of this transaction.
     pub from: Option<String>,
+
+    /// The recipient of this transaction. This may be `name` if the transaction was a name purchase, or `a` if it was a name's data change.
     pub to: Option<String>,
+
+    /// The amount of Krist transferred in this transaction. Can be 0, notably if the transaction was a name's data change.
     pub value: f64,
+
+    /// The time this transaction this was made, as an ISO-8601 string.
     pub time: String,
+
+    /// The name associated with this transaction, without the `.kst` suffix.
     pub name: Option<String>,
     pub metadata: Option<String>,
     pub sent_metaname: Option<String>,
