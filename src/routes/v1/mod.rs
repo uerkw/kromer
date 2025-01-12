@@ -1,7 +1,6 @@
 mod name;
 mod transaction;
 mod wallet;
-mod ws;
 
 use actix_web::{get, web, HttpResponse};
 
@@ -33,6 +32,5 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(version_get);
     cfg.configure(wallet::config);
     cfg.configure(transaction::config);
-    cfg.configure(ws::config);
     cfg.configure(name::config);
 }
