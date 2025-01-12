@@ -5,7 +5,7 @@ use surrealdb::{
 };
 
 use super::serialize_table_opt;
-use crate::routes::PaginationParams;
+use crate::{models::transactions::TransactionType, routes::PaginationParams};
 
 #[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct Model {
@@ -20,6 +20,7 @@ pub struct Model {
     pub metadata: Option<String>,
     pub timestamp: Datetime,
     pub to: Thing,
+    pub transaction_type: TransactionType,
 }
 
 #[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
