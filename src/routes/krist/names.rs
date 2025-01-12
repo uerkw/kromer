@@ -48,10 +48,5 @@ async fn name_get(
 }
 
 pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        web::scope("/names")
-            .service(wallet_richest)
-            .service(name_get)
-            .service(name_list),
-    );
+    cfg.service(web::scope("/names").service(name_get).service(name_list));
 }
