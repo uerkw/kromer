@@ -40,14 +40,7 @@ pub async fn get_me(
         None => Err(KromerError::Wallet(WalletError::NotFound)),
     }?;
 
-    let address_json = AddressJson {
-        address: wallet.address,
-        balance: wallet.balance,
-        total_in: wallet.total_in,
-        total_out: wallet.total_out,
-        first_seen: wallet.created_at.to_string(),
-        names: None,
-    };
+    let address_json: AddressJson = wallet.into();
 
     let me_message = OutgoingWebSocketMessageType::Me {
         is_guest: false,
