@@ -36,7 +36,7 @@ impl From<transaction::Model> for TransactionJson {
             from: Some(transaction.from.to_string()), // TODO: use address actual address instead.
             to: Some(transaction.to.to_string()),     // TODO: use address actual address instead.
             value: transaction.amount,
-            time: transaction.timestamp.to_string(),
+            time: transaction.timestamp.to_raw(),
             name: None, // TODO: Populate this later, maybe with a separate function.
             metadata: transaction.metadata,
             sent_metaname: None, // NOTE: We do not support this, yet.
