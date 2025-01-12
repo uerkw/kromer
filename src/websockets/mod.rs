@@ -1,5 +1,4 @@
 pub mod handler;
-pub mod models;
 pub mod routes;
 pub mod token_cache;
 pub mod types;

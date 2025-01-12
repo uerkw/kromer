@@ -1,7 +1,7 @@
-use crate::websockets::models::addresses::AddressJson;
-use crate::websockets::models::blocks::BlockJson;
-use crate::websockets::models::names::NameJson;
-use crate::websockets::models::transactions::TransactionJson;
+use crate::models::addresses::AddressJson;
+use crate::models::blocks::BlockJson;
+use crate::models::names::NameJson;
+use crate::models::transactions::TransactionJson;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

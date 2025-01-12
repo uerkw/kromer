@@ -9,6 +9,7 @@ use ws::actors::server::WsServerActor as OldWebSocketServer;
 pub mod database;
 pub mod errors;
 pub mod guards;
+pub mod models;
 pub mod routes;
 pub mod websockets;
 pub mod ws;

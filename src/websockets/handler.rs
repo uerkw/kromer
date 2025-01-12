@@ -1,6 +1,9 @@
 use crate::{
     errors::{websocket::WebSocketError, KromerError},
-    websockets::models::{error::ErrorResponse, websockets::IncomingWebsocketMessage},
+    models::{
+        error::ErrorResponse,
+        websockets::{IncomingWebsocketMessage, OutgoingWebSocketMessage, WebSocketMessageType},
+    },
     AppState,
 };
 use std::{
@@ -10,12 +13,7 @@ use std::{
 };
 
 use super::{
-    models::websockets::{
-        OutgoingWebSocketMessage, WebSocketMessageType,
-    },
-    utils::datetime::convert_to_iso_string,
-    wrapped_ws::WrappedWsData,
-    ws_server::WsServerHandle,
+    utils::datetime::convert_to_iso_string, wrapped_ws::WrappedWsData, ws_server::WsServerHandle,
 };
 
 use crate::websockets::routes::me::get_me as route_get_me;

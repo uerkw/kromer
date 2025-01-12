@@ -5,15 +5,13 @@ use surrealdb::{engine::any::Any, Surreal};
 use crate::{
     database::models::wallet::Model as Wallet,
     errors::{wallet::WalletError, KromerError},
-    websockets::{
-        models::{
-            addresses::AddressJson,
-            websockets::{
-                OutgoingWebSocketMessage, OutgoingWebSocketMessageType, WebSocketMessageType,
-            },
+    models::{
+        addresses::AddressJson,
+        websockets::{
+            OutgoingWebSocketMessage, OutgoingWebSocketMessageType, WebSocketMessageType,
         },
-        wrapped_ws::WrappedWsData,
     },
+    websockets::wrapped_ws::WrappedWsData,
 };
 
 pub async fn get_me(
