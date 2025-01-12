@@ -15,5 +15,7 @@ pub fn make_url(uuid: Uuid) -> Result<String, KromerError> {
     let server_url = env::var("PUBLIC_URL")
         .map_err(|_| KromerError::WebSocket(WebSocketError::ServerConfigError))?;
 
-    Ok(format!("{schema}://{server_url}/api/v1/ws/gateway/{uuid}"))
+    Ok(format!(
+        "{schema}://{server_url}/api/krist/ws/gateway/{uuid}"
+    ))
 }
