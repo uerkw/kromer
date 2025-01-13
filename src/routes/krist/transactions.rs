@@ -31,13 +31,26 @@ async fn transaction_list(
 
 #[get("/latest")]
 async fn transaction_latest(
-    _state: web::Data<AppState>,
-    _query: web::Query<PaginationParams>,
+    state: web::Data<AppState>,
+    query: web::Query<PaginationParams>,
 ) -> Result<HttpResponse, KromerError> {
-    // let params = query.into_inner();
-    // let db = &state.db;
+    let params = query.into_inner();
+    let db = &state.db;
 
-    todo!("Not yet implemented, requires sorting by date on transaction model")
+    let total = Transaction::count(db).await?;
+    let transactions = Transaction::sorted_by_date(db, &params).await?;
+
+    let transactions: Vec<TransactionJson> =
+        transactions.into_iter().map(|trans| trans.into()).collect();
+
+    let response = TransactionListResponse {
+        ok: true,
+        count: transactions.len(),
+        total,
+        transactions,
+    };
+
+    Ok(HttpResponse::Ok().json(response))
 }
 
 #[get("/{id}")]

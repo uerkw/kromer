@@ -101,6 +101,28 @@ impl Model {
 
         Ok(count.count)
     }
+
+    /// Get all transactions ordered by date in descending order.
+    pub async fn sorted_by_date(
+        db: &Surreal<Any>,
+        pagination: &PaginationParams,
+    ) -> Result<Vec<Model>, surrealdb::Error> {
+        let limit = pagination.limit.unwrap_or(50);
+        let offset = pagination.offset.unwrap_or(0);
+        let limit = limit.clamp(1, 1000);
+
+        let q =
+            "SELECT * OMIT id FROM transaction ORDER BY timestamp DESC LIMIT $limit START $offset;";
+
+        let mut response = db
+            .query(q)
+            .bind(("limit", limit))
+            .bind(("offset", offset))
+            .await?;
+        let models: Vec<Model> = response.take(0)?;
+
+        Ok(models)
+    }
 }
 
 impl TransactionNameData {
