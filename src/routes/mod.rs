@@ -4,9 +4,11 @@ use crate::guards;
 
 pub mod index;
 pub mod internal;
+pub mod pg_internal;
 pub mod krist;
 pub mod not_found;
 pub mod v1;
+pub mod pg_v1;
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct PaginationParams {
@@ -31,5 +33,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .guard(guards::internal_key_guard)
             .configure(internal::config),
     );
+    cfg.service(web::scope("/pg/api/v1").configure(pg_v1::config));
+    cfg.service(web::scope("/pg/api/_internal").configure(pg_internal::config));
     cfg.service(web::scope("").service(index::index_get));
 }

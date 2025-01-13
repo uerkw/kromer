@@ -13,6 +13,8 @@ use kromer::{errors::KromerError, routes, AppState};
 use tokio::sync::Mutex;
 use tokio::{spawn, try_join};
 
+use sea_orm::Database as SeaDatabase;
+
 #[actix_web::main]
 async fn main() -> Result<(), KromerError> {
     env::set_var("RUST_LOG", "debug");
@@ -23,6 +25,12 @@ async fn main() -> Result<(), KromerError> {
     let host = env::var("HOST").expect("HOST is not set in .env file");
     let port = env::var("PORT").expect("PORT is not set in .env file");
     let server_url = format!("{host}:{port}");
+
+    let pg_database_url = env::var("PG_DATABASE_URL").expect("PG_DATABASE_URL is not set in .env file");
+
+    let pg_db = SeaDatabase::connect(&pg_database_url)
+        .await
+        .expect("Failed to connect to the Postgres database");
 
     // TODO: Factor the database stuff out to a function.
     let surreal_endpoint = env::var("SURREAL_URL").expect("SURREAL_URL is not set in .env file");
@@ -54,7 +62,9 @@ async fn main() -> Result<(), KromerError> {
     let ws_manager = Arc::new(Mutex::new(WsDataManager::default()));
 
     let state = web::Data::new(AppState {
+        pg_db,
         db: db_arc,
+        name_cost: 500.0,
         ws_server_handle,
         token_cache,
         ws_manager,
