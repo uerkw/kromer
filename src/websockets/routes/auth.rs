@@ -19,7 +19,7 @@ pub async fn perform_login(
     // and that it is valid
 
     // Check the wallet to verify
-    let privatekey = login_details.privatekey;
+    let privatekey = login_details.private_key;
     let wallet = Wallet::verify(&db, privatekey.clone())
         .await
         .map_err(|_| KromerError::Wallet(WalletError::InvalidPassword))?;
