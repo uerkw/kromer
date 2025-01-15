@@ -47,7 +47,6 @@ async fn main() -> Result<(), KromerError> {
 
     let db_arc = Arc::new(db);
 
-
     let (ws_server, ws_server_handle) = WsServer::new();
     let ws_server = spawn(ws_server.run());
     let token_cache = Arc::new(Mutex::new(TokenCache::new()));

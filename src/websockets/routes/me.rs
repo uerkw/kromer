@@ -7,9 +7,7 @@ use crate::{
     errors::{wallet::WalletError, KromerError},
     models::{
         addresses::AddressJson,
-        websockets::{
-            OutgoingWebSocketMessage, OutgoingWebSocketMessageType, WebSocketMessageType,
-        },
+        websockets::{OutgoingWebSocketMessage, ResponseMessageType, WebSocketMessageType},
     },
     websockets::wrapped_ws::WrappedWsData,
 };
@@ -20,7 +18,7 @@ pub async fn get_me(
     ws_metadata: &WrappedWsData,
 ) -> Result<OutgoingWebSocketMessage, KromerError> {
     if ws_metadata.is_guest() {
-        let me_message = OutgoingWebSocketMessageType::Me {
+        let me_message = ResponseMessageType::Me {
             is_guest: true,
             address: None,
         };
@@ -42,7 +40,7 @@ pub async fn get_me(
 
     let address_json: AddressJson = wallet.into();
 
-    let me_message = OutgoingWebSocketMessageType::Me {
+    let me_message = ResponseMessageType::Me {
         is_guest: false,
         address: Some(address_json),
     };

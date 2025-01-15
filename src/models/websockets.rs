@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use super::addresses::AddressJson;
+use crate::websockets::wrapped_ws::WrappedWsData;
+
+use super::{addresses::AddressJson, auth::LoginDetails};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -12,6 +14,11 @@ pub enum WebSocketSubscription {
     Names,
     OwnNames,
     Motd,
+}
+
+pub struct WsSessionModification {
+    pub msg_type: Option<OutgoingWebSocketMessage>,
+    pub wrapped_ws_data: Option<WrappedWsData>,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -27,7 +34,7 @@ pub enum WebSocketMessageType {
     },
     Response {
         #[serde(flatten)]
-        message: OutgoingWebSocketMessageType,
+        message: ResponseMessageType,
     },
     Keepalive {
         server_time: String,
@@ -35,7 +42,10 @@ pub enum WebSocketMessageType {
 
     // 100% these are missing a lot
     Address,
-    Login,
+    Login {
+        #[serde(flatten, skip_serializing_if = "Option::is_none")]
+        login_details: Option<LoginDetails>,
+    },
     Logout,
     Me,
     SubmitBlock,
@@ -49,16 +59,24 @@ pub enum WebSocketMessageType {
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "responding_to_type")]
-pub enum OutgoingWebSocketMessageType {
+pub enum ResponseMessageType {
     Address {
         #[serde(flatten)]
         address: AddressJson,
     },
-    Login {},
-    Logout,
+    Login {
+        #[serde(rename = "isGuest")]
+        is_guest: bool,
+        address: Option<AddressJson>,
+    },
+    Logout {
+        #[serde(rename = "isGuest")]
+        is_guest: bool,
+    },
     Me {
         #[serde(rename = "isGuest")]
         is_guest: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
         address: Option<AddressJson>,
     },
     SubmitBlock,
@@ -150,7 +168,7 @@ impl WebSocketMessageType {
     pub fn member_str(&self) -> &'static str {
         match self {
             WebSocketMessageType::Address => "address",
-            WebSocketMessageType::Login => "login",
+            WebSocketMessageType::Login { .. } => "login",
             WebSocketMessageType::Logout => "logout",
             WebSocketMessageType::Me => "me",
             WebSocketMessageType::SubmitBlock => "submit_block",

@@ -4,6 +4,7 @@ use crate::database::models::transaction::{Model as Transaction, TransactionCrea
 use crate::database::models::wallet::Model as Wallet;
 
 use crate::errors::wallet::WalletError;
+use crate::models::transactions::TransactionType;
 use crate::{
     errors::{transaction::TransactionError, KromerError},
     routes::PaginationParams,
@@ -76,6 +77,7 @@ async fn transaction_create(
         to: recipient.id.unwrap(),
         amount: details.amount,
         metadata: details.metadata,
+        transaction_type: TransactionType::Transfer,
     };
     let response: Vec<Transaction> = db.insert("transaction").content(creation_data).await?;
     let response = response.first().unwrap(); // the fuck man

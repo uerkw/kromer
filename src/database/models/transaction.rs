@@ -34,6 +34,7 @@ pub struct TransactionCreateData {
     pub to: Thing,
     pub amount: f64,
     pub metadata: Option<String>,
+    pub transaction_type: TransactionType
 }
 
 #[derive(Debug, Default, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
