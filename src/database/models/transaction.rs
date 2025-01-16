@@ -1,10 +1,10 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use surrealdb::{
-    engine::any::Any,
-    sql::{Datetime, Id, Thing},
-    Surreal,
+    engine::any::Any, sql::{Datetime, Id, Thing}, Surreal
 };
+
+use rust_decimal::Decimal;
 
 use super::{serialize_table_opt, CountResponse};
 use crate::{models::transactions::TransactionType, routes::PaginationParams};
@@ -19,7 +19,7 @@ pub struct Model {
         serialize_with = "serialize_table_opt"
     )]
     pub id: Option<Thing>,
-    pub amount: f64,
+    pub amount: Decimal,
     pub from: Thing,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<String>,
@@ -32,7 +32,7 @@ pub struct Model {
 pub struct TransactionCreateData {
     pub from: Thing,
     pub to: Thing,
-    pub amount: f64,
+    pub amount: Decimal,
     pub metadata: Option<String>,
     pub transaction_type: TransactionType
 }

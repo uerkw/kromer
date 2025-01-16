@@ -1,8 +1,8 @@
 use surrealdb::{
-    engine::any::Any,
-    sql::{Datetime, Id, Thing},
-    Surreal,
+    engine::any::Any, sql::{Datetime, Id, Thing}, Surreal
 };
+
+use rust_decimal::Decimal;
 
 use super::{serialize_table_opt, CountResponse};
 use crate::routes::PaginationParams;
@@ -15,13 +15,13 @@ pub struct Model {
     )]
     pub id: Option<Thing>,
     pub address: String,
-    pub balance: f64,
+    pub balance: Decimal,
     pub created_at: Datetime,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hash: Option<String>, // We dont want to retrieve the hash all the time.
     pub is_shared: bool,
-    pub total_in: f64,
-    pub total_out: f64,
+    pub total_in: Decimal,
+    pub total_out: Decimal,
 }
 
 impl Model {

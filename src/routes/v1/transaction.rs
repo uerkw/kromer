@@ -1,4 +1,6 @@
 use actix_web::{get, post, web, HttpResponse};
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 
 use crate::database::models::transaction::{Model as Transaction, TransactionCreateData};
 use crate::database::models::wallet::Model as Wallet;
@@ -15,7 +17,7 @@ use crate::{
 struct TransactionDetails {
     pub password: String,
     pub to: String,
-    pub amount: f64,
+    pub amount: Decimal,
     pub metadata: Option<String>,
 }
 
@@ -54,7 +56,7 @@ async fn transaction_create(
     let db = &state.db;
 
     // Check on the server so DB doesnt throw.
-    if details.amount < 0.0 {
+    if details.amount < dec!(0.0) {
         return Err(KromerError::Transaction(TransactionError::InvalidAmount));
     }
 

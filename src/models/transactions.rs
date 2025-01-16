@@ -1,3 +1,4 @@
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::database::models::transaction;
@@ -34,7 +35,7 @@ pub struct TransactionJson {
     pub to: Option<String>,
 
     /// The amount of Krist transferred in this transaction. Can be 0, notably if the transaction was a name's data change.
-    pub value: f64,
+    pub value: Decimal,
 
     /// The time this transaction this was made, as an ISO-8601 string.
     pub time: String,
