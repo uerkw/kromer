@@ -1,7 +1,9 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use surrealdb::{
-    engine::any::Any, sql::{Datetime, Id, Thing}, Surreal
+    engine::any::Any,
+    sql::{Datetime, Id, Thing},
+    Surreal,
 };
 
 use rust_decimal::Decimal;
@@ -34,7 +36,7 @@ pub struct TransactionCreateData {
     pub to: Thing,
     pub amount: Decimal,
     pub metadata: Option<String>,
-    pub transaction_type: TransactionType
+    pub transaction_type: TransactionType,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
@@ -45,7 +47,11 @@ pub struct TransactionNameData {
 
 impl Model {
     /// Get a transaction from its unique ID
-    pub async fn get(db: &Surreal<Any>, id: String) -> Result<Option<Model>, surrealdb::Error> {
+    pub async fn get<S: AsRef<str>>(
+        db: &Surreal<Any>,
+        id: S,
+    ) -> Result<Option<Model>, surrealdb::Error> {
+        let id = id.as_ref();
         let thing: Thing = id.try_into().unwrap();
         let q = "SELECT * FROM transaction WHERE id = $id;";
 
@@ -56,10 +62,11 @@ impl Model {
     }
 
     /// Get a transaction from its unique ID, not including the table part
-    pub async fn get_partial(
+    pub async fn get_partial<S: AsRef<str>>(
         db: &Surreal<Any>,
-        id: String,
+        id: S,
     ) -> Result<Option<Model>, surrealdb::Error> {
+        let id = id.as_ref();
         let id = Id::from(id);
         let thing = Thing::from(("transaction", id));
 
@@ -178,7 +185,7 @@ impl TransactionNameData {
         }
 
         let input = input.unwrap(); // We can do this, we made sure it exists.
-        return Self::parse(input);
+        Self::parse(input)
     }
 
     /// Parse a transaction name from a reference to an optional string-like type.
@@ -201,6 +208,6 @@ impl TransactionNameData {
         }
 
         let input = input.as_ref().unwrap(); // We can do this, we made sure it exists.
-        return Self::parse(input);
+        Self::parse(input)
     }
 }

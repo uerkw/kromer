@@ -1,3 +1,4 @@
+pub mod krist;
 pub mod name;
 pub mod transaction;
 pub mod wallet;

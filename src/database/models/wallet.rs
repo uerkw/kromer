@@ -1,5 +1,7 @@
 use surrealdb::{
-    engine::any::Any, sql::{Datetime, Id, Thing}, Surreal
+    engine::any::Any,
+    sql::{Datetime, Id, Thing},
+    Surreal,
 };
 
 use rust_decimal::Decimal;
@@ -26,7 +28,11 @@ pub struct Model {
 
 impl Model {
     /// Get a wallet from its unique ID
-    pub async fn get(db: &Surreal<Any>, id: String) -> Result<Option<Model>, surrealdb::Error> {
+    pub async fn get<S: AsRef<str>>(
+        db: &Surreal<Any>,
+        id: S,
+    ) -> Result<Option<Model>, surrealdb::Error> {
+        let id = id.as_ref();
         let thing: Thing = id.try_into().unwrap();
         let q = "SELECT * FROM wallet WHERE id = $id;";
 
@@ -37,10 +43,11 @@ impl Model {
     }
 
     /// Get a wallet from its unique ID, not including the table part
-    pub async fn get_partial(
+    pub async fn get_partial<S: AsRef<str>>(
         db: &Surreal<Any>,
-        id: String,
+        id: S,
     ) -> Result<Option<Model>, surrealdb::Error> {
+        let id = id.as_ref();
         let id = Id::from(id);
         let thing = Thing::from(("wallet", id));
 

@@ -1,9 +1,12 @@
 use crate::{
     errors::{websocket::WebSocketError, KromerError},
-    models::{motd::{Constants, CurrencyInfo, DetailedMotd, PackageInfo}, websockets::{
-        IncomingWebsocketMessage, OutgoingWebSocketMessage, ResponseMessageType,
-        WebSocketMessageType, WsSessionModification,
-    }},
+    models::{
+        motd::{Constants, CurrencyInfo, DetailedMotd, PackageInfo},
+        websockets::{
+            IncomingWebsocketMessage, OutgoingWebSocketMessage, ResponseMessageType,
+            WebSocketMessageType, WsSessionModification,
+        },
+    },
     AppState,
 };
 use std::{
@@ -310,9 +313,7 @@ async fn spawn_keepalive(ws_server: WsServerHandle, conn: Uuid) -> (JoinHandle<(
     (join_handle, abort_handle)
 }
 
-async fn send_hello_message(
-    session: &mut actix_ws::Session,
-) {
+async fn send_hello_message(session: &mut actix_ws::Session) {
     let hello_message = OutgoingWebSocketMessage {
         ok: Some(true),
         id: "null".to_string(),
@@ -343,7 +344,7 @@ async fn send_hello_message(
                     min_work: 50,
                     max_work: 500,
                     work_factor: 500.0,
-                    seconds_per_block: 5000
+                    seconds_per_block: 5000,
                 },
                 currency: CurrencyInfo {
                     address_prefix: "k".to_string(),
@@ -352,9 +353,11 @@ async fn send_hello_message(
                     currency_symbol: "Ϗ".to_string(),
                 },
                 notice: "Some awesome notice will go here".to_string(),
-            }
-        }
+            },
+        },
     };
 
-    let _ = session.text(serde_json::to_string(&hello_message).unwrap_or("{}".to_string())).await;
+    let _ = session
+        .text(serde_json::to_string(&hello_message).unwrap_or("{}".to_string()))
+        .await;
 }

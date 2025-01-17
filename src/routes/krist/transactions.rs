@@ -1,7 +1,7 @@
 use actix_web::{get, web, HttpResponse};
 
 use crate::database::models::transaction::Model as Transaction;
-use crate::errors::{transaction::TransactionError, KromerError};
+use crate::errors::krist::{transaction::TransactionError, KristError};
 use crate::models::transactions::{TransactionJson, TransactionListResponse, TransactionResponse};
 use crate::{routes::PaginationParams, AppState};
 
@@ -9,7 +9,7 @@ use crate::{routes::PaginationParams, AppState};
 async fn transaction_list(
     state: web::Data<AppState>,
     query: web::Query<PaginationParams>,
-) -> Result<HttpResponse, KromerError> {
+) -> Result<HttpResponse, KristError> {
     let params = query.into_inner();
     let db = &state.db;
 
@@ -33,7 +33,7 @@ async fn transaction_list(
 async fn transaction_latest(
     state: web::Data<AppState>,
     query: web::Query<PaginationParams>,
-) -> Result<HttpResponse, KromerError> {
+) -> Result<HttpResponse, KristError> {
     let params = query.into_inner();
     let db = &state.db;
 
@@ -57,7 +57,7 @@ async fn transaction_latest(
 async fn transaction_get(
     state: web::Data<AppState>,
     id: web::Path<String>,
-) -> Result<HttpResponse, KromerError> {
+) -> Result<HttpResponse, KristError> {
     let id = id.into_inner();
     let db = &state.db;
 
@@ -68,7 +68,7 @@ async fn transaction_get(
         transaction: trans.into(),
     })
     .map(|response| HttpResponse::Ok().json(response))
-    .ok_or_else(|| KromerError::Transaction(TransactionError::NotFound))
+    .ok_or_else(|| KristError::Transaction(TransactionError::NotFound))
 }
 
 pub fn config(cfg: &mut web::ServiceConfig) {
