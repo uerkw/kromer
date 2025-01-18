@@ -17,7 +17,7 @@ use crate::websockets::handler::handle_ws;
 use crate::websockets::types::common::WebSocketTokenData;
 use crate::websockets::utils;
 use crate::websockets::wrapped_ws::WrappedWsData;
-use crate::{errors::KromerError, AppState};
+use crate::AppState;
 
 #[derive(serde::Deserialize)]
 struct WsConnDetails {
