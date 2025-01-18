@@ -12,8 +12,7 @@ use tokio::task::spawn_local;
 use tokio::time::sleep;
 
 use crate::database::models::wallet::Model as Wallet;
-use crate::errors::wallet::WalletError;
-use crate::errors::websocket::WebSocketError;
+use crate::errors::krist::{address::AddressError, websockets::WebSocketError, KristError};
 use crate::websockets::handler::handle_ws;
 use crate::websockets::types::common::WebSocketTokenData;
 use crate::websockets::utils;
@@ -31,7 +30,7 @@ pub async fn setup_ws(
     state: Data<AppState>,
     details: Option<web::Json<WsConnDetails>>,
     _stream: web::Payload,
-) -> Result<HttpResponse, KromerError> {
+) -> Result<HttpResponse, KristError> {
     let tracing_span = tracing::span!(tracing::Level::DEBUG, "setup_ws_route");
     let _tracing_enter = tracing_span.enter();
 
@@ -46,8 +45,8 @@ pub async fn setup_ws(
         // This should error back in the request if the wallet key is invalid.
         let wallet = Wallet::verify(db, check_key)
             .await
-            .map_err(KromerError::Database)?
-            .ok_or_else(|| KromerError::Wallet(WalletError::InvalidPassword))?;
+            .map_err(KristError::Database)?
+            .ok_or_else(|| KristError::Address(AddressError::AuthFailed))?;
 
         address = wallet.address;
     }
@@ -79,7 +78,7 @@ pub async fn setup_ws(
     // Make the URL and return it to the user.
     let url = match utils::make_url::make_url(uuid) {
         Ok(value) => value,
-        Err(e) => return Err(e),
+        Err(_) => return Err(KristError::Custom("server_config_error")),
     };
 
     Ok(HttpResponse::Ok().json(json!({
@@ -96,7 +95,7 @@ pub async fn gateway(
     body: web::Payload,
     state: Data<AppState>,
     token: web::Path<String>,
-) -> Result<impl Responder, KromerError> {
+) -> Result<impl Responder, KristError> {
     let debug_span = tracing::span!(tracing::Level::INFO, "ws_gateway_route");
     let _tracing_debug_enter = debug_span.enter();
 
@@ -104,7 +103,7 @@ pub async fn gateway(
     tracing::info!("Request with token string: {token_as_string}");
 
     let uuid_result = Uuid::from_str(&token_as_string)
-        .map_err(|_| KromerError::WebSocket(WebSocketError::InvalidUuid));
+        .map_err(|_| KristError::WebSocket(WebSocketError::InvalidWebsocketToken));
 
     // This is a one off message, and we don't want to actually open the server handling
     if uuid_result.is_err() {
@@ -128,13 +127,13 @@ pub async fn gateway(
     tracing::info!("Token {uuid} was valid");
     let token_params = token_cache
         .remove_token(uuid)
-        .ok_or_else(|| KromerError::WebSocket(WebSocketError::InvalidUuid))?;
+        .ok_or_else(|| KristError::WebSocket(WebSocketError::InvalidWebsocketToken))?;
     drop(token_cache);
 
     // Clone a WsServerHandle so that we already have the Server's Command Channel referenced.
     let ws_server_handle = state.ws_server_handle.clone();
     let (response, session, msg_stream) = actix_ws::handle(&req, body)
-        .map_err(|_| KromerError::WebSocket(WebSocketError::HandshakeError))?;
+        .map_err(|_| KristError::WebSocket(WebSocketError::HandshakeError))?;
 
     // Add this data to a struct for easy access to the session information
     let wrapped_ws_data = WrappedWsData::new(uuid, token_params.address, token_params.privatekey);
@@ -153,7 +152,7 @@ pub async fn gateway(
 async fn send_error_message(
     req: HttpRequest,
     body: web::Payload,
-) -> Result<HttpResponse, KromerError> {
+) -> Result<HttpResponse, KristError> {
     let (response, mut session, _msg_stream) =
         actix_ws::handle(&req, body).map_err(|_| WebSocketError::HandshakeError)?;
 
