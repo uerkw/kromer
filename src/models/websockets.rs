@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_aux::field_attributes::deserialize_number_from_string;
 
 use crate::websockets::wrapped_ws::WrappedWsData;
 
@@ -113,7 +112,6 @@ pub struct WebSocketTokenData {
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct IncomingWebsocketMessage {
-    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub id: String,
     #[serde(flatten, rename = "type")]
     pub message_type: WebSocketMessageType,
