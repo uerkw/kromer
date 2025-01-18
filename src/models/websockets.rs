@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::websockets::wrapped_ws::WrappedWsData;
 
+use super::deserialize_number_into_string;
 use super::{addresses::AddressJson, auth::LoginDetails};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -112,6 +113,7 @@ pub struct WebSocketTokenData {
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct IncomingWebsocketMessage {
+    #[serde(deserialize_with = "deserialize_number_into_string")]
     pub id: String,
     #[serde(flatten, rename = "type")]
     pub message_type: WebSocketMessageType,
