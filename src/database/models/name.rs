@@ -109,7 +109,7 @@ impl Model {
 
     /// Get the total amount of transactions in the database
     pub async fn count(db: &Surreal<Any>) -> Result<usize, surrealdb::Error> {
-        let q = "(SELECT count() FROM transaction GROUP BY count)[0] or { count: 0 }";
+        let q = "(SELECT count() FROM name GROUP BY count)[0] or { count: 0 }";
 
         let mut response = db.query(q).await?;
         let count: Option<CountResponse> = response.take(0)?;
