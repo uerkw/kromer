@@ -282,7 +282,7 @@ async fn process_text_msg(
         },
 
         WebSocketMessageType::GetSubscriptionLevel => {
-           ws_modification_data = get_subscription_level(ws_metadata, msg_id);
+            ws_modification_data = get_subscription_level(ws_metadata, msg_id);
         },
 
         WebSocketMessageType::GetValidSubscriptionLevels => {
