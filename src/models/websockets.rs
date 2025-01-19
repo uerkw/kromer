@@ -1,3 +1,4 @@
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::websockets::types::common::WebSocketSubscriptionType;
@@ -43,7 +44,11 @@ pub enum WebSocketMessageType {
     },
 
     // 100% these are missing a lot
-    Address,
+    Address {
+        address: Option<String>,
+        #[serde(rename = "fetchNames")]
+        fetch_names: Option<bool>,
+    },
     Login {
         #[serde(flatten, skip_serializing_if = "Option::is_none")]
         login_details: Option<LoginDetails>,
@@ -59,7 +64,18 @@ pub enum WebSocketMessageType {
     Unsubscribe {
         event: WebSocketSubscriptionType,
     },
-    MakeTransaction,
+
+    // TODO: These are currently options so that we can catch if serialization does not capture a field
+    // This should possibly be handled by a custom serde_json::from_str() implementation that can parse values and error properly.
+    MakeTransaction {
+        #[serde(rename = "privatekey")]
+        private_key: Option<String>,
+        to: Option<String>,
+        amount: Option<Decimal>,
+        metadata: Option<String>,
+        #[serde(rename = "requestId")]
+        request_id: Option<String>
+    },
     Work,
 }
 
@@ -67,7 +83,6 @@ pub enum WebSocketMessageType {
 #[serde(rename_all = "snake_case", tag = "responding_to_type")]
 pub enum ResponseMessageType {
     Address {
-        #[serde(flatten)]
         address: AddressJson,
     },
     Login {
@@ -98,7 +113,18 @@ pub enum ResponseMessageType {
     Unsubcribe {
         subscription_level: Vec<String>,
     },
-    MakeTransaction,
+    MakeTransaction {
+        from: String,
+        to: String,
+        value: Decimal,
+        time: String,
+        name: Option<String>,
+        metadata: Option<String>,
+        sent_metaname: Option<String>,
+        sent_name: Option<String>,
+        #[serde(rename = "type")]
+        transaction_type: String,
+    },
     Work,
 }
 
@@ -182,7 +208,7 @@ impl WebSocketMessageType {
     /// Return the enum member name as a str
     pub fn member_str(&self) -> &'static str {
         match self {
-            WebSocketMessageType::Address => "address",
+            WebSocketMessageType::Address { .. } => "address",
             WebSocketMessageType::Login { .. } => "login",
             WebSocketMessageType::Logout => "logout",
             WebSocketMessageType::Me => "me",
@@ -191,7 +217,7 @@ impl WebSocketMessageType {
             WebSocketMessageType::GetSubscriptionLevel => "get_subscription_level",
             WebSocketMessageType::GetValidSubscriptionLevels => "get_valid_subscription_levels",
             WebSocketMessageType::Unsubscribe { .. } => "unsubscribe",
-            WebSocketMessageType::MakeTransaction => "make_transaction",
+            WebSocketMessageType::MakeTransaction { .. } => "make_transaction",
             WebSocketMessageType::Work => "work",
             WebSocketMessageType::Hello { .. } => "hello",
             WebSocketMessageType::Error { .. } => "error",

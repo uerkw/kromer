@@ -1,16 +1,19 @@
 use crate::{
     errors::{websocket::WebSocketError, KromerError},
     models::{
-        error::ErrorResponse, motd::{Constants, CurrencyInfo, DetailedMotd, PackageInfo}, websockets::{
+        error::ErrorResponse,
+        motd::{Constants, CurrencyInfo, DetailedMotd, PackageInfo},
+        websockets::{
             IncomingWebsocketMessage, OutgoingWebSocketMessage, ResponseMessageType,
             WebSocketMessageType, WsSessionModification,
-        }
+        },
     },
     websockets::routes::{
+        addresses::get_address,
         auth::perform_logout,
         subscriptions::{
             get_subscription_level, get_valid_subscription_levels, subscribe, unsubscribe,
-        },
+        }, transactions::make_transaction,
     },
     AppState,
 };
@@ -107,9 +110,9 @@ pub async fn handle_ws(
                     }
 
                     AggregatedMessage::Text(text) => {
-                        // TODO: Better message handling
                         if text.chars().count() > 512 {
-                            // TODO: Use error message struct in models
+                            // TODO: Possibly use error message struct in models
+                            // This isn't super necessary though and this shortcut saves some unnecessary error handling...
                             let error_msg = json!({
                                 "ok": "false",
                                 "error": "message_too_long",
@@ -201,11 +204,7 @@ async fn process_text_msg(
     // strip leading and trailing whitespace (spaces, newlines, etc.)
     let msg = text.trim();
 
-    //// For testing, consider echoing the message back
-    // let result = session.text(msg).await;
-
-    // result.map_err(|_| KromerError::WebSocket(WebSocketError::MessageSend))?;
-
+    // TODO: potentially change how this serialization is handled, so that we can properly extract "Invalid Parameter" errors.
     let parsed_msg_result: Result<IncomingWebsocketMessage, serde_json::Error> =
         serde_json::from_str(msg);
 
@@ -229,6 +228,13 @@ async fn process_text_msg(
     tracing::debug!("{:?}", msg_type);
 
     match msg_type {
+        WebSocketMessageType::Address {
+            address,
+            fetch_names,
+        } => {
+            ws_modification_data = get_address(address, fetch_names, msg_id, db).await;
+        }
+
         WebSocketMessageType::Login {
             login_details: Some(login_details),
         } => {
@@ -267,7 +273,7 @@ async fn process_text_msg(
         }
         WebSocketMessageType::Logout => {
             let auth_result = perform_logout(ws_metadata).await;
- 
+
             let new_ws_modification_data = WsSessionModification {
                 msg_type: Some(OutgoingWebSocketMessage {
                     ok: Some(true),
@@ -280,7 +286,16 @@ async fn process_text_msg(
             };
 
             ws_modification_data = new_ws_modification_data;
-        
+        }
+
+        WebSocketMessageType::MakeTransaction {
+            private_key,
+            to,
+            amount,
+            metadata,
+            request_id
+        } => {
+            ws_modification_data = make_transaction(db, msg_id, private_key, to, amount, metadata, request_id).await;
         }
 
         WebSocketMessageType::Subscribe { event } => {
@@ -305,18 +320,16 @@ async fn process_text_msg(
                 msg_type: Some(OutgoingWebSocketMessage {
                     ok: Some(false),
                     id: msg_id,
-                    message: WebSocketMessageType::Error { 
+                    message: WebSocketMessageType::Error {
                         error: ErrorResponse {
                             error: "mining_disabled".to_string(),
-                            message: Some("Mining disabled".to_string())
-                        } 
-                    }
+                            message: Some("Mining disabled".to_string()),
+                        },
+                    },
                 }),
                 wrapped_ws_data: None,
             }
         }
-
-        
 
         WebSocketMessageType::Me => {
             let me_data = route_get_me(msg_id, db, ws_metadata).await;
