@@ -7,7 +7,7 @@ use crate::{
             WebSocketMessageType, WsSessionModification,
         },
     },
-    websockets::{routes::auth::perform_logout, types::common::WebSocketSubscriptionList},
+    websockets::routes::{auth::perform_logout, subscriptions::{get_subscription_level, get_valid_subscription_levels}},
     AppState,
 };
 use std::{
@@ -282,43 +282,11 @@ async fn process_text_msg(
         },
 
         WebSocketMessageType::GetSubscriptionLevel => {
-            // Just need to pull out the subscription levels from the wrapped data, and display it
-            let subscription_levels = &ws_metadata.subs;
-
-            let new_ws_modification_data = WsSessionModification {
-                msg_type: Some(OutgoingWebSocketMessage {
-                    ok: Some(true),
-                    id: msg_id.clone(),
-                    message: WebSocketMessageType::Response {
-                        message: ResponseMessageType::GetSubscriptionLevel {
-                            subscription_level:  subscription_levels.to_owned().to_string(),
-                        }
-                        
-                    }
-                }),
-                wrapped_ws_data: None,
-            };
-
-            ws_modification_data = new_ws_modification_data;
+           ws_modification_data = get_subscription_level(ws_metadata, msg_id);
         },
 
         WebSocketMessageType::GetValidSubscriptionLevels => {
-            let valid_subscription_levels = WebSocketSubscriptionList::new_all_subs();
-
-            let new_ws_modification_data = WsSessionModification {
-                msg_type: Some(OutgoingWebSocketMessage {
-                    ok: Some(true),
-                    id: msg_id.clone(),
-                    message: WebSocketMessageType::Response {
-                        message: ResponseMessageType::GetValidSubscriptionLevels {
-                            valid_subscription_levels: valid_subscription_levels.to_string(),
-                        }
-                    }
-                }),
-                wrapped_ws_data: None, 
-            };
-
-            ws_modification_data = new_ws_modification_data;
+            ws_modification_data = get_valid_subscription_levels(msg_id);
         },
 
         WebSocketMessageType::Me => {
