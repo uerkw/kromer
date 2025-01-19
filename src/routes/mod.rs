@@ -4,6 +4,7 @@ use crate::guards;
 
 pub mod index;
 pub mod internal;
+pub mod krist;
 pub mod not_found;
 pub mod v1;
 
@@ -24,6 +25,7 @@ impl Default for PaginationParams {
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(web::scope("/api/v1").configure(v1::config));
+    cfg.service(web::scope("/api/krist").configure(krist::config));
     cfg.service(
         web::scope("/api/_internal")
             .guard(guards::internal_key_guard)

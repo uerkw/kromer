@@ -1,4 +1,6 @@
 use actix_web::{post, web, HttpResponse};
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use serde_json::json;
 
 use crate::database::models::player::Model as Player;
@@ -16,7 +18,7 @@ struct MinecraftUser {
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 struct GiveMoneyReq {
     pub address: String,
-    pub amount: f64,
+    pub amount: Decimal,
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
@@ -75,7 +77,7 @@ async fn wallet_give_money(
     let db = &state.db;
     let data = data.into_inner();
 
-    if data.amount < 0.0 {
+    if data.amount < dec!(0.0) {
         return Err(KromerError::Transaction(TransactionError::InvalidAmount));
     }
 

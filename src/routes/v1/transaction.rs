@@ -1,9 +1,12 @@
 use actix_web::{get, post, web, HttpResponse};
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 
 use crate::database::models::transaction::{Model as Transaction, TransactionCreateData};
 use crate::database::models::wallet::Model as Wallet;
 
 use crate::errors::wallet::WalletError;
+use crate::models::transactions::TransactionType;
 use crate::{
     errors::{transaction::TransactionError, KromerError},
     routes::PaginationParams,
@@ -14,7 +17,7 @@ use crate::{
 struct TransactionDetails {
     pub password: String,
     pub to: String,
-    pub amount: f64,
+    pub amount: Decimal,
     pub metadata: Option<String>,
 }
 
@@ -39,7 +42,7 @@ async fn transaction_get(
     let id = id.into_inner();
     let db = &state.db;
 
-    let slim = Transaction::get(db, id).await?;
+    let slim = Transaction::get_partial(db, id).await?;
 
     Ok(HttpResponse::Ok().json(slim))
 }
@@ -53,7 +56,7 @@ async fn transaction_create(
     let db = &state.db;
 
     // Check on the server so DB doesnt throw.
-    if details.amount < 0.0 {
+    if details.amount < dec!(0.0) {
         return Err(KromerError::Transaction(TransactionError::InvalidAmount));
     }
 
@@ -64,11 +67,19 @@ async fn transaction_create(
         .await?
         .ok_or_else(|| KromerError::Wallet(WalletError::NotFound))?;
 
+    // Make sure to check the request to see if the funds are available.
+    if sender.balance < details.amount {
+        return Err(KromerError::Transaction(
+            TransactionError::InsufficientFunds,
+        ));
+    }
+
     let creation_data = TransactionCreateData {
         from: sender.id.unwrap(), // `unwrap` should be fine here, we already made sure it exists.
         to: recipient.id.unwrap(),
         amount: details.amount,
         metadata: details.metadata,
+        transaction_type: TransactionType::Transfer,
     };
     let response: Vec<Transaction> = db.insert("transaction").content(creation_data).await?;
     let response = response.first().unwrap(); // the fuck man

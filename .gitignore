@@ -1,3 +1,10 @@
 /target
 /.env
 /data.db
+
+/.idea
+/.bruno
+**/target/
+
+# surrealdb-migrations configuration file, an example will be provided
+.surrealdb

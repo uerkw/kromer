@@ -7,5 +7,5 @@ pub fn internal_key_guard(ctx: &GuardContext) -> bool {
     ctx.head()
         .headers()
         .get(INTERNAL_KEY_HEADER)
-        .map_or(false, |it| it.as_bytes() == capy_password.as_bytes())
+        .is_some_and(|it| it.as_bytes() == capy_password.as_bytes())
 }

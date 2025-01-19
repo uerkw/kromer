@@ -1,12 +1,19 @@
 use std::env;
+use std::sync::Arc;
 
 use actix_web::{middleware, web, App, HttpServer};
+
+use kromer::websockets::token_cache::TokenCache;
+use kromer::websockets::ws_manager::WsDataManager;
+use kromer::websockets::ws_server::WsServer;
 use surrealdb::opt::auth::Root;
 
 use kromer::database::db::{ConnectionOptions, Database};
 use kromer::{errors::KromerError, routes, AppState};
+use tokio::sync::Mutex;
+use tokio::{spawn, try_join};
 
-#[tokio::main]
+#[actix_web::main]
 async fn main() -> Result<(), KromerError> {
     env::set_var("RUST_LOG", "debug");
     tracing_subscriber::fmt::init();
@@ -38,9 +45,21 @@ async fn main() -> Result<(), KromerError> {
 
     let db = Database::connect(&surreal_endpoint, &connect_options).await?;
 
-    let state = AppState { db };
+    let db_arc = Arc::new(db);
 
-    HttpServer::new(move || {
+    let (ws_server, ws_server_handle) = WsServer::new();
+    let ws_server = spawn(ws_server.run());
+    let token_cache = Arc::new(Mutex::new(TokenCache::new()));
+    let ws_manager = Arc::new(Mutex::new(WsDataManager::default()));
+
+    let state = web::Data::new(AppState {
+        db: db_arc,
+        ws_server_handle,
+        token_cache,
+        ws_manager,
+    });
+
+    let http_server = HttpServer::new(move || {
         App::new()
             .app_data(
                 web::FormConfig::default()
@@ -58,14 +77,17 @@ async fn main() -> Result<(), KromerError> {
                 web::JsonConfig::default()
                     .error_handler(|err, _req| KromerError::Validation(err.to_string()).into()),
             )
-            .app_data(web::Data::new(state.clone()))
+            .app_data(state.clone())
             .wrap(middleware::Logger::default())
+            .wrap(middleware::NormalizePath::trim())
             .configure(kromer::routes::config)
             .default_service(web::route().to(routes::not_found::not_found))
     })
     .bind(&server_url)?
-    .run()
-    .await?;
+    .run();
+
+    // Join the tasks together using tokio.
+    try_join!(http_server, async move { ws_server.await.unwrap() })?;
 
     Ok(())
 }

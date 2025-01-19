@@ -4,7 +4,7 @@ use surrealdb::{
     Surreal,
 };
 
-use super::serialize_table_opt;
+use super::{serialize_table_opt, CountResponse};
 use crate::routes::PaginationParams;
 
 #[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -28,7 +28,11 @@ pub struct Model {
 
 impl Model {
     /// Get a name from its unique ID
-    pub async fn get(db: &Surreal<Any>, id: String) -> Result<Option<Model>, surrealdb::Error> {
+    pub async fn get<S: AsRef<str>>(
+        db: &Surreal<Any>,
+        id: S,
+    ) -> Result<Option<Model>, surrealdb::Error> {
+        let id = id.as_ref();
         let thing: Thing = id.try_into().unwrap();
         let q = "SELECT * FROM name WHERE id = $id;";
 
@@ -39,11 +43,13 @@ impl Model {
     }
 
     /// Get a name from its unique ID, not including the table part
-    pub async fn get_partial(
+    pub async fn get_partial<S: AsRef<str>>(
         db: &Surreal<Any>,
-        id: String,
+        id: S,
     ) -> Result<Option<Model>, surrealdb::Error> {
+        let id = id.as_ref();
         let id = Id::from(id);
+
         let thing = Thing::from(("name", id));
 
         let q = "SELECT * FROM name WHERE id = $id;";
@@ -99,5 +105,16 @@ impl Model {
         let models: Vec<Model> = response.take(0)?;
 
         Ok(models)
+    }
+
+    /// Get the total amount of transactions in the database
+    pub async fn count(db: &Surreal<Any>) -> Result<usize, surrealdb::Error> {
+        let q = "(SELECT count() FROM name GROUP BY count)[0] or { count: 0 }";
+
+        let mut response = db.query(q).await?;
+        let count: Option<CountResponse> = response.take(0)?;
+        let count = count.unwrap_or_default(); // Its fine, we make sure we always get a response with the `or` statement in the query.
+
+        Ok(count.count)
     }
 }

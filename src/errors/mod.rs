@@ -1,5 +1,8 @@
+pub mod krist;
+pub mod name;
 pub mod transaction;
 pub mod wallet;
+pub mod websocket;
 
 use actix_web::{body::BoxBody, error, http::StatusCode, HttpResponse};
 use serde::{Deserialize, Serialize};
@@ -18,8 +21,14 @@ pub enum KromerError {
     #[error("Wallet error: {0}")]
     Wallet(#[from] wallet::WalletError),
 
+    #[error("Name error: {0}")]
+    Name(#[from] name::NameError),
+
     #[error("Transaction error: {0}")]
     Transaction(#[from] transaction::TransactionError),
+
+    #[error("WebSocket error: {0}")]
+    WebSocket(#[from] websocket::WebSocketError),
 
     #[error("Something went wrong: {0}")]
     Internal(&'static str),
@@ -41,6 +50,7 @@ impl error::ResponseError for KromerError {
             KromerError::Database(..) => StatusCode::INTERNAL_SERVER_ERROR,
             KromerError::Wallet(e) => e.status_code(),
             KromerError::Transaction(e) => e.status_code(),
+            KromerError::Name(e) => e.status_code(),
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
