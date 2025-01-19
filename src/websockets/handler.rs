@@ -7,7 +7,7 @@ use crate::{
             WebSocketMessageType, WsSessionModification,
         },
     },
-    websockets::routes::auth::perform_logout,
+    websockets::{routes::auth::perform_logout, types::common::WebSocketSubscriptionList},
     AppState,
 };
 use std::{
@@ -279,7 +279,48 @@ async fn process_text_msg(
 
                 ws_modification_data = new_ws_modification_data;
             }
-        }
+        },
+
+        WebSocketMessageType::GetSubscriptionLevel => {
+            // Just need to pull out the subscription levels from the wrapped data, and display it
+            let subscription_levels = &ws_metadata.subs;
+
+            let new_ws_modification_data = WsSessionModification {
+                msg_type: Some(OutgoingWebSocketMessage {
+                    ok: Some(true),
+                    id: msg_id.clone(),
+                    message: WebSocketMessageType::Response {
+                        message: ResponseMessageType::GetSubscriptionLevel {
+                            subscription_level:  subscription_levels.to_owned().to_string(),
+                        }
+                        
+                    }
+                }),
+                wrapped_ws_data: None,
+            };
+
+            ws_modification_data = new_ws_modification_data;
+        },
+
+        WebSocketMessageType::GetValidSubscriptionLevels => {
+            let valid_subscription_levels = WebSocketSubscriptionList::new_all_subs();
+
+            let new_ws_modification_data = WsSessionModification {
+                msg_type: Some(OutgoingWebSocketMessage {
+                    ok: Some(true),
+                    id: msg_id.clone(),
+                    message: WebSocketMessageType::Response {
+                        message: ResponseMessageType::GetValidSubscriptionLevels {
+                            valid_subscription_levels: valid_subscription_levels.to_string(),
+                        }
+                    }
+                }),
+                wrapped_ws_data: None, 
+            };
+
+            ws_modification_data = new_ws_modification_data;
+        },
+
         WebSocketMessageType::Me => {
             let me_data = route_get_me(msg_id, db, ws_metadata).await;
             if me_data.is_ok() {
@@ -288,7 +329,8 @@ async fn process_text_msg(
                     wrapped_ws_data: None,
                 }
             }
-        }
+        },
+
         _ => {
             // TODO: This is just an example, we should error here with a good error message.
             // We should tell the user there was a syntax error with the type in their message.
@@ -338,7 +380,7 @@ async fn send_hello_message(session: &mut actix_ws::Session) {
         ok: Some(true),
         id: "null".to_string(),
         message: WebSocketMessageType::Hello {
-            motd: DetailedMotd {
+            motd: Box::new(DetailedMotd {
                 server_time: "server_time".to_string(),
                 motd: "Message of the day".to_string(),
                 set: None,
@@ -373,7 +415,7 @@ async fn send_hello_message(session: &mut actix_ws::Session) {
                     currency_symbol: "Ϗ".to_string(),
                 },
                 notice: "Some awesome notice will go here".to_string(),
-            },
+            }),
         },
     };
 

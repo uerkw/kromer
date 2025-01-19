@@ -27,7 +27,7 @@ pub struct WsSessionModification {
 pub enum WebSocketMessageType {
     Hello {
         #[serde(flatten)]
-        motd: super::motd::DetailedMotd,
+        motd: Box<super::motd::DetailedMotd>,
     },
     Error {
         #[serde(flatten)]
@@ -82,8 +82,12 @@ pub enum ResponseMessageType {
     },
     SubmitBlock,
     Subscribe,
-    GetSubscriptionLevel,
-    GetValidSubscriptionLevels,
+    GetSubscriptionLevel {
+        subscription_level: Vec<String>
+    },
+    GetValidSubscriptionLevels {
+        valid_subscription_levels: Vec<String>
+    },
     Unsubcribe,
     MakeTransaction,
     Work,

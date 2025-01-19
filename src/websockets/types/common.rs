@@ -1,6 +1,6 @@
 use std::{fmt, str::FromStr};
 
-// use crate::errors::{websocket::WebSocketError, KromerError};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct WebSocketTokenData {
@@ -8,21 +8,53 @@ pub struct WebSocketTokenData {
     pub privatekey: Option<String>,
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, PartialOrd )]
 pub struct WebSocketSubscriptionList {
+    #[serde(flatten)]
     pub subscriptions: Vec<WebSocketSubscriptionType>,
 }
 
 impl WebSocketSubscriptionList {
     pub fn new() -> Self {
         WebSocketSubscriptionList {
-            subscriptions: vec![WebSocketSubscriptionType::OwnTransactions],
+            subscriptions: vec![
+                WebSocketSubscriptionType::OwnTransactions,
+                WebSocketSubscriptionType::Blocks, 
+                ],
         }
+    }
+
+    pub fn new_all_subs() -> Self {
+        WebSocketSubscriptionList {
+            subscriptions: vec![
+                WebSocketSubscriptionType::Blocks,
+                WebSocketSubscriptionType::OwnBlocks,
+                WebSocketSubscriptionType::Transactions,
+                WebSocketSubscriptionType::OwnTransactions,
+                WebSocketSubscriptionType::Names,
+                WebSocketSubscriptionType::OwnNames,
+                WebSocketSubscriptionType::Motd, 
+            ]
+        } 
+    }
+
+    pub fn to_string(&self) -> Vec<String> {
+        let subscriptions = &self.subscriptions;
+
+        let mut sub_strings: Vec<String> = Vec::new();
+
+        for subscription in subscriptions {
+            sub_strings.push(format!("{}", subscription));
+        }
+
+        sub_strings
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub enum WebSocketSubscriptionType {
+    Blocks,
+    OwnBlocks,
     Transactions,
     OwnTransactions,
     Names,
@@ -35,6 +67,8 @@ impl FromStr for WebSocketSubscriptionType {
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match input {
+            "blocks" => Ok(Self::Blocks),
+            "ownBlocks" => Ok(Self::OwnBlocks),
             "transactions" => Ok(Self::Transactions),
             "ownTransactions" => Ok(Self::OwnTransactions),
             "names" => Ok(Self::Names),
@@ -48,6 +82,8 @@ impl FromStr for WebSocketSubscriptionType {
 impl fmt::Display for WebSocketSubscriptionType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Blocks => write!(f, "blocks"),
+            Self::OwnBlocks => write!(f, "ownBlocks"),
             Self::Transactions => write!(f, "transactions"),
             Self::OwnTransactions => write!(f, "ownTransactions"),
             Self::Names => write!(f, "names"),
