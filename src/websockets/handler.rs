@@ -1,11 +1,10 @@
 use crate::{
     errors::{websocket::WebSocketError, KromerError},
     models::{
-        motd::{Constants, CurrencyInfo, DetailedMotd, PackageInfo},
-        websockets::{
+        error::ErrorResponse, motd::{Constants, CurrencyInfo, DetailedMotd, PackageInfo}, websockets::{
             IncomingWebsocketMessage, OutgoingWebSocketMessage, ResponseMessageType,
             WebSocketMessageType, WsSessionModification,
-        },
+        }
     },
     websockets::routes::{
         auth::perform_logout,
@@ -299,6 +298,25 @@ async fn process_text_msg(
         WebSocketMessageType::GetValidSubscriptionLevels => {
             ws_modification_data = get_valid_subscription_levels(msg_id);
         }
+
+        // Mining will be perma-disabled
+        WebSocketMessageType::SubmitBlock => {
+            ws_modification_data = WsSessionModification {
+                msg_type: Some(OutgoingWebSocketMessage {
+                    ok: Some(false),
+                    id: msg_id,
+                    message: WebSocketMessageType::Error { 
+                        error: ErrorResponse {
+                            error: "mining_disabled".to_string(),
+                            message: Some("Mining disabled".to_string())
+                        } 
+                    }
+                }),
+                wrapped_ws_data: None,
+            }
+        }
+
+        
 
         WebSocketMessageType::Me => {
             let me_data = route_get_me(msg_id, db, ws_metadata).await;
