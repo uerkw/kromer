@@ -8,7 +8,7 @@ pub struct WebSocketTokenData {
     pub privatekey: Option<String>,
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, PartialOrd )]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct WebSocketSubscriptionList {
     #[serde(flatten)]
     pub subscriptions: Vec<WebSocketSubscriptionType>,
@@ -19,8 +19,8 @@ impl WebSocketSubscriptionList {
         WebSocketSubscriptionList {
             subscriptions: vec![
                 WebSocketSubscriptionType::OwnTransactions,
-                WebSocketSubscriptionType::Blocks, 
-                ],
+                WebSocketSubscriptionType::Blocks,
+            ],
         }
     }
 
@@ -33,9 +33,9 @@ impl WebSocketSubscriptionList {
                 WebSocketSubscriptionType::OwnTransactions,
                 WebSocketSubscriptionType::Names,
                 WebSocketSubscriptionType::OwnNames,
-                WebSocketSubscriptionType::Motd, 
-            ]
-        } 
+                WebSocketSubscriptionType::Motd,
+            ],
+        }
     }
 
     pub fn to_string(&self) -> Vec<String> {
@@ -52,6 +52,7 @@ impl WebSocketSubscriptionList {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[serde(rename_all = "camelCase")]
 pub enum WebSocketSubscriptionType {
     Blocks,
     OwnBlocks,

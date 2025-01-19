@@ -7,7 +7,12 @@ use crate::{
             WebSocketMessageType, WsSessionModification,
         },
     },
-    websockets::routes::{auth::perform_logout, subscriptions::{get_subscription_level, get_valid_subscription_levels}},
+    websockets::routes::{
+        auth::perform_logout,
+        subscriptions::{
+            get_subscription_level, get_valid_subscription_levels, subscribe, unsubscribe,
+        },
+    },
     AppState,
 };
 use std::{
@@ -279,15 +284,23 @@ async fn process_text_msg(
 
                 ws_modification_data = new_ws_modification_data;
             }
-        },
+        }
+
+        WebSocketMessageType::Subscribe { event } => {
+            ws_modification_data = subscribe(ws_metadata, msg_id, event);
+        }
+
+        WebSocketMessageType::Unsubscribe { event } => {
+            ws_modification_data = unsubscribe(ws_metadata, msg_id, event)
+        }
 
         WebSocketMessageType::GetSubscriptionLevel => {
             ws_modification_data = get_subscription_level(ws_metadata, msg_id);
-        },
+        }
 
         WebSocketMessageType::GetValidSubscriptionLevels => {
             ws_modification_data = get_valid_subscription_levels(msg_id);
-        },
+        }
 
         WebSocketMessageType::Me => {
             let me_data = route_get_me(msg_id, db, ws_metadata).await;
@@ -297,7 +310,7 @@ async fn process_text_msg(
                     wrapped_ws_data: None,
                 }
             }
-        },
+        }
 
         _ => {
             // TODO: This is just an example, we should error here with a good error message.

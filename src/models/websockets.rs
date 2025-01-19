@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use crate::websockets::types::common::WebSocketSubscriptionType;
 use crate::websockets::wrapped_ws::WrappedWsData;
 
 use super::deserialize_number_into_string;
@@ -50,10 +51,14 @@ pub enum WebSocketMessageType {
     Logout,
     Me,
     SubmitBlock,
-    Subscribe,
+    Subscribe {
+        event: WebSocketSubscriptionType,
+    },
     GetSubscriptionLevel,
     GetValidSubscriptionLevels,
-    Unsubscribe,
+    Unsubscribe {
+        event: WebSocketSubscriptionType,
+    },
     MakeTransaction,
     Work,
 }
@@ -81,14 +86,18 @@ pub enum ResponseMessageType {
         address: Option<AddressJson>,
     },
     SubmitBlock,
-    Subscribe,
+    Subscribe {
+        subscription_level: Vec<String>,
+    },
     GetSubscriptionLevel {
-        subscription_level: Vec<String>
+        subscription_level: Vec<String>,
     },
     GetValidSubscriptionLevels {
-        valid_subscription_levels: Vec<String>
+        valid_subscription_levels: Vec<String>,
     },
-    Unsubcribe,
+    Unsubcribe {
+        subscription_level: Vec<String>,
+    },
     MakeTransaction,
     Work,
 }
@@ -178,10 +187,10 @@ impl WebSocketMessageType {
             WebSocketMessageType::Logout => "logout",
             WebSocketMessageType::Me => "me",
             WebSocketMessageType::SubmitBlock => "submit_block",
-            WebSocketMessageType::Subscribe => "subscribe",
+            WebSocketMessageType::Subscribe { .. } => "subscribe",
             WebSocketMessageType::GetSubscriptionLevel => "get_subscription_level",
             WebSocketMessageType::GetValidSubscriptionLevels => "get_valid_subscription_levels",
-            WebSocketMessageType::Unsubscribe => "unsubscribe",
+            WebSocketMessageType::Unsubscribe { .. } => "unsubscribe",
             WebSocketMessageType::MakeTransaction => "make_transaction",
             WebSocketMessageType::Work => "work",
             WebSocketMessageType::Hello { .. } => "hello",
