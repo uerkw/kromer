@@ -39,12 +39,12 @@ pub async fn perform_login(
     Err(KromerError::Wallet(WalletError::InvalidPassword))
 }
 
-pub async fn perform_logout(ws_metadata: &WrappedWsData) -> Result<WrappedWsData, KromerError> {
+pub async fn perform_logout(ws_metadata: &WrappedWsData) -> WrappedWsData {
     // No matter if they are logged into a wallet or not, we just want to reset the auth details.
 
-    Ok(WrappedWsData {
+    WrappedWsData {
         address: "guest".to_string(),
         privatekey: None,
         ..ws_metadata.to_owned()
-    })
+    }
 }
