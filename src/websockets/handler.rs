@@ -7,6 +7,7 @@ use crate::{
             WebSocketMessageType, WsSessionModification,
         },
     },
+    websockets::routes::auth::perform_logout,
     AppState,
 };
 use std::{
@@ -258,6 +259,25 @@ async fn process_text_msg(
                         wrapped_ws_data: None,
                     }
                 }
+            }
+        }
+        WebSocketMessageType::Logout => {
+            let auth_result = perform_logout(ws_metadata).await;
+
+            if auth_result.is_ok() {
+                let new_auth_data = auth_result.unwrap();
+                let new_ws_modification_data = WsSessionModification {
+                    msg_type: Some(OutgoingWebSocketMessage {
+                        ok: Some(true),
+                        id: msg_id.clone(),
+                        message: WebSocketMessageType::Response {
+                            message: ResponseMessageType::Logout { is_guest: true },
+                        },
+                    }),
+                    wrapped_ws_data: Some(new_auth_data),
+                };
+
+                ws_modification_data = new_ws_modification_data;
             }
         }
         WebSocketMessageType::Me => {
